@@ -1,26 +1,22 @@
 ; z80dasm 1.1.0
-; command line: z80dasm -a -g 0xa000 -o VIOv20.asm -l -t VIOv20.bin
+; command line: z80dasm -a -g 0xa000 -o vio_v20.asm -l -t VIOv20.bin
 
 	org	0a000h
-	defb	CRT_ADDR	0f0h
-	defb	CRT_REG		0f1h
 
 	and l			;a000	a5 	. 
 	jp la01ch		;a001	c3 1c a0 	. . . 
-sub_a004h:                      ; init 6845, clear screen, cursor at top left
-	jp la19eh		;a004	c3 9e a1 	. . . init call/ret
-	jp la1c0h		;a007	c3 c0 a1 	. . . init & jp 0000h
+sub_a004h:
+	jp la19eh		;a004	c3 9e a1 	. . . 
+	jp la1c0h		;a007	c3 c0 a1 	. . . 
 sub_a00ah:
-	jp la1fch		;a00a	c3 fc a1 	(JCRTCO) print character in C, interpret control codes
+	jp la1fch		;a00a	c3 fc a1 	. . . 
 sub_a00dh:
-	jp la24fh		;a00d	c3 4f a2 	(JCRTOU) print character in C, print characters at 00h-31h too
-	jp la433h		;a010	c3 33 a4 	(JTEXCO) print 00h terminated string (start in IY)
-	jp la441h		;a013	c3 41 a4 	(JTEX??) print 00h terminated string (start in IY) CR = LF
-	jp la1d7h		;a016	c3 d7 a1 	. . . disp char set
-
+	jp la24fh		;a00d	c3 4f a2 	. O . 
+	jp la433h		;a010	c3 33 a4 	. 3 . 
+	jp la441h		;a013	c3 41 a4 	. A . 
+	jp la1d7h		;a016	c3 d7 a1 	. . . 
 sub_a019h:
-	jp la1c6h		;a019	c3 c6 a1 	
-
+	jp la1c6h		;a019	c3 c6 a1 	. . . 
 la01ch:
 	pop af			;a01c	f1 	. 
 	push af			;a01d	f5 	. 
@@ -41,7 +37,7 @@ la032h:
 	call nz,sub_a004h		;a039	c4 04 a0 	. . . 
 	ld hl,04600h		;a03c	21 00 46 	! . F 
 la03fh:
-	in a,(0f0h)		;a03f	db f0 	. .   CRT_ADDR
+	in a,(0f0h)		;a03f	db f0 	. . 
 	rlca			;a041	07 	. 
 	jr nc,la03fh		;a042	30 fb 	0 . 
 	ld a,(hl)			;a044	7e 	~ 
@@ -49,7 +45,6 @@ la03fh:
 	jp z,la04ch		;a047	ca 4c a0 	. L . 
 	pop hl			;a04a	e1 	. 
 	ret			;a04b	c9 	. 
-
 la04ch:
 	pop hl			;a04c	e1 	. 
 	push bc			;a04d	c5 	. 
@@ -69,7 +64,6 @@ la04ch:
 	pop de			;a06a	d1 	. 
 	pop bc			;a06b	c1 	. 
 	ret			;a06c	c9 	. 
-
 	push iy		;a06d	fd e5 	. . 
 	push bc			;a06f	c5 	. 
 	push hl			;a070	e5 	. 
@@ -80,17 +74,14 @@ la074h:
 	jr z,la07ch		;a077	28 03 	( . 
 	inc hl			;a079	23 	# 
 	jr la074h		;a07a	18 f8 	. . 
-
 la07ch:
 	ld (hl),000h		;a07c	36 00 	6 . 
 	ld iy,0ff04h		;a07e	fd 21 04 ff 	. ! . . 
 	jp la441h		;a082	c3 41 a4 	. A . 
-
 	pop hl			;a085	e1 	. 
 	pop bc			;a086	c1 	. 
 	pop iy		;a087	fd e1 	. . 
 	ret			;a089	c9 	. 
-
 sub_a08ah:
 	ld bc,(0ff82h)		;a08a	ed 4b 82 ff 	. K . . 
 	ld hl,0460ah		;a08e	21 0a 46 	! . F 
@@ -103,7 +94,6 @@ sub_a08ah:
 	ld de,0fe4bh		;a09c	11 4b fe 	. K . 
 	ld bc,0fe72h		;a09f	01 72 fe 	. r . 
 	jr la0aah		;a0a2	18 06 	. . 
-
 la0a4h:
 	ld de,0ff04h		;a0a4	11 04 ff 	. . . 
 	ld bc,0ff2bh		;a0a7	01 2b ff 	. + . 
@@ -112,7 +102,6 @@ la0aah:
 	ld (0460ch),bc		;a0ae	ed 43 0c 46 	. C . F 
 la0b2h:
 	ret			;a0b2	c9 	. 
-
 sub_a0b3h:
 	ld de,(0ff82h)		;a0b3	ed 5b 82 ff 	. [ . . 
 	ld hl,0460ch		;a0b7	21 0c 46 	! . F 
@@ -131,12 +120,10 @@ la0c5h:
 	inc de			;a0ca	13 	. 
 	djnz la0c5h		;a0cb	10 f8 	. . 
 	ret			;a0cd	c9 	. 
-
 la0ceh:
 	ex de,hl			;a0ce	eb 	. 
 	ld (hl),000h		;a0cf	36 00 	6 . 
 	ret			;a0d1	c9 	. 
-
 sub_a0d2h:
 	ld c,004h		;a0d2	0e 04 	. . 
 	call sub_a00ah		;a0d4	cd 0a a0 	. . . 
@@ -157,13 +144,11 @@ la0e1h:
 	pop de			;a0f2	d1 	. 
 	inc hl			;a0f3	23 	# 
 	jr la0e1h		;a0f4	18 eb 	. . 
-
 la0f6h:
 	ld a,(hl)			;a0f6	7e 	~ 
 	cp 00dh		;a0f7	fe 0d 	. . 
 	call z,la106h		;a0f9	cc 06 a1 	. . . 
 	ret			;a0fc	c9 	. 
-
 sub_a0fdh:
 	push hl			;a0fd	e5 	. 
 	push de			;a0fe	d5 	. 
@@ -173,39 +158,29 @@ sub_a0fdh:
 	pop de			;a103	d1 	. 
 	pop hl			;a104	e1 	. 
 	ret			;a105	c9 	. 
-
 la106h:
 	ld c,00dh		;a106	0e 0d 	. . 
 	call sub_a00ah		;a108	cd 0a a0 	. . . 
 	ld c,00ah		;a10b	0e 0a 	. . 
 	call sub_a00ah		;a10d	cd 0a a0 	. . . 
 	ret			;a110	c9 	. 
-
 sub_a111h:
 	ld hl,0460ah		;a111	21 0a 46 	! . F 
 	call sub_a44dh		;a114	cd 4d a4 	. M . 
 	ld bc,00015h		;a117	01 15 00 	. . . 
 	ld a,02ah		;a11a	3e 2a 	> * 
-	cpir		;a11c	ed b1 	. .   Search for 02h in 046oh to 0460h + 0015h
+	cpir		;a11c	ed b1 	. . 
 	jr z,la121h		;a11e	28 01 	( . 
 la120h:
 	ret			;a120	c9 	. 
-
 la121h:
 	dec hl			;a121	2b 	+ 
 	ld bc,00c5dh		;a122	01 5d 0c 	. ] . 
 la125h:
-	ld a,(bc)			;a125	0a 	. 
-	cp 00dh		;a126	fe 0d 	. . 
-	jr z,la16ah		;a128	28 40 	( @ 
-	cp (hl)			;a12a	be 	. 
-	jr nz,la120h		;a12b	20 f3 	  . 
-	inc bc			;a12d	03 	. 
-	inc hl			;a12e	23 	# 
-	jr la125h		;a12f	18 f4 	. . 
-
-	ld b,e			;a131	43 	COPYRIGHTS BY BARDEHLE ELECTRONIC D-4796 SALZKOTTEN 06 85
-
+	defb 0ah			;a125	0a 	. 
+	defb 0dh		;a126	fe 0d 	. . 
+	defm 'COPYRIGHTS BY BARDEHLE ELECTRONIC D-4796 SALZKOTTEN '
+	defm '06 85'
 la16ah:
 	ld hl,0460ah		;a16a	21 0a 46 	! . F 
 	call sub_a44dh		;a16d	cd 4d a4 	. M . 
@@ -220,7 +195,6 @@ la172h:
 	ld (0ff82h),hl		;a180	22 82 ff 	" . . 
 	call sub_a188h		;a183	cd 88 a1 	. . . 
 	jr la120h		;a186	18 98 	. . 
-
 sub_a188h:
 	ld hl,00c5dh		;a188	21 5d 0c 	! ] . 
 la18bh:
@@ -231,33 +205,29 @@ la18bh:
 	call sub_a00ah		;a191	cd 0a a0 	. . . 
 	inc hl			;a194	23 	# 
 	jr la18bh		;a195	18 f4 	. . 
-
 la197h:
 	call la106h		;a197	cd 06 a1 	. . . 
 	call la106h		;a19a	cd 06 a1 	. . . 
 	ret			;a19d	c9 	. 
-
-la19eh:   ; init, cls, cursor, return
+la19eh:
 	ld de,0ff04h		;a19e	11 04 ff 	. . . 
 	ld bc,0ff2bh		;a1a1	01 2b ff 	. + . 
 	ld (0460ah),de		;a1a4	ed 53 0a 46 	. S . F 
 	ld (0460ch),bc		;a1a8	ed 43 0c 46 	. C . F 
 	ld hl,la49dh		;a1ac	21 9d a4 	! . . 
-	call sub_a019h		;a1af	cd 19 a0 	. . .   config 6845
+	call sub_a019h		;a1af	cd 19 a0 	. . . 
 	ld c,00ch		;a1b2	0e 0c 	. . 
 	call sub_a00ah		;a1b4	cd 0a a0 	. . . 
 	ld a,0a5h		;a1b7	3e a5 	> . 
 	ld (04601h),a		;a1b9	32 01 46 	2 . F 
 	ld (04600h),a		;a1bc	32 00 46 	2 . F 
 	ret			;a1bf	c9 	. 
-
-la1c0h:	; init, cls, cursor, restart
+la1c0h:
 	call la19eh		;a1c0	cd 9e a1 	. . . 
 	jp 00000h		;a1c3	c3 00 00 	. . . 
-
-la1c6h:                         ; load config into 6845
-	ld c,0f0h		;a1c6	0e f0 	. .  CRT_ADDR
-la1c8h:  ; read 6845 config table at (HL) and put it in the 6845 and return
+la1c6h:
+	ld c,0f0h		;a1c6	0e f0 	. . 
+la1c8h:
 	ld a,(hl)			;a1c8	7e 	~ 
 	cp 0ffh		;a1c9	fe ff 	. . 
 	ret z			;a1cb	c8 	. 
@@ -265,11 +235,10 @@ la1c8h:  ; read 6845 config table at (HL) and put it in the 6845 and return
 	inc hl			;a1ce	23 	# 
 	ld a,(hl)			;a1cf	7e 	~ 
 	inc c			;a1d0	0c 	. 
-	out (c),a		;a1d1	ed 79 	. y   CRT_REG
+	out (c),a		;a1d1	ed 79 	. y 
 	dec c			;a1d3	0d 	. 
 	inc hl			;a1d4	23 	# 
 	jr la1c8h		;a1d5	18 f1 	. . 
-
 la1d7h:
 	ld c,00ch		;a1d7	0e 0c 	. . 
 	call sub_a00ah		;a1d9	cd 0a a0 	. . . 
@@ -290,7 +259,6 @@ la1f3h:
 	inc c			;a1f6	0c 	. 
 	jr nz,la1f3h		;a1f7	20 fa 	  . 
 	jp 00000h		;a1f9	c3 00 00 	. . . 
-
 la1fch:
 	push iy		;a1fc	fd e5 	. . 
 	push ix		;a1fe	dd e5 	. . 
@@ -306,15 +274,13 @@ la1fch:
 	pop ix		;a20b	dd e1 	. . 
 	pop iy		;a20d	fd e1 	. . 
 	ret			;a20f	c9 	. 
-
 sub_a210h:
 	ld a,c			;a210	79 	y 
 	ld bc,0000ah		;a211	01 0a 00 	. . . 
 	ld hl,la245h		;a214	21 45 a2 	! E . 
-	cpir		;a217	ed b1 	. .  search a245h - a255h for (a)
+	cpir		;a217	ed b1 	. . 
 	jr z,la21eh		;a219	28 03 	( . 
 	jp la256h		;a21b	c3 56 a2 	. V . 
-
 la21eh:
 	ld hl,la22eh		;a21e	21 2e a2 	! . . 
 	ld a,c			;a221	79 	y 
@@ -328,48 +294,54 @@ la21eh:
 	ld d,(hl)			;a22b	56 	V 
 	ex de,hl			;a22c	eb 	. 
 	jp (hl)			;a22d	e9 	. 
-
-la22eh: ; jump table used in la21e
-	defw 99 a3		;a22e	 	. a399h 
-	defw 7a a3		;a230	 	z a37ah
-	defw 17 a3		;a232	 	. a317h
-	defw 09 a3		;a234	 	.  a309h
-	defw 36 a2		;a236	 	. .  a2feh
-la238h: ; jump table used in la21e
-	defw fo a2		;a238	 	.  a238h
-	defw d1 a2		;a23a	 	.  a2d1h
-	defw b8 a2		;a23c	 	.  a2b8h
-	defw b3 a2		;a23e	 	.  a2b3h
-	defw 9f a2		;a240	 	.  a29fh
-	defw 56 a2		;a242	 	. V .  a256h
-
+la22eh:
+	sbc a,c			;a22e	99 	. 
+	and e			;a22f	a3 	. 
+	ld a,d			;a230	7a 	z 
+	and e			;a231	a3 	. 
+	rla			;a232	17 	. 
+	and e			;a233	a3 	. 
+	add hl,bc			;a234	09 	. 
+	and e			;a235	a3 	. 
+	cp 0a2h		;a236	fe a2 	. . 
+	ret p			;a238	f0 	. 
+	and d			;a239	a2 	. 
+	pop de			;a23a	d1 	. 
+	and d			;a23b	a2 	. 
+	cp b			;a23c	b8 	. 
+	and d			;a23d	a2 	. 
+	or e			;a23e	b3 	. 
+	and d			;a23f	a2 	. 
+	sbc a,a			;a240	9f 	. 
+	and d			;a241	a2 	. 
+	jp la256h		;a242	c3 56 a2 	. V . 
 la245h:
-	defb	0dh		;a245
-	defb	0ah		;a246
-	defb	0ch		;a247
-	defb	5fh		;a248
-	defb	00h		;a249
-	defb	01h		;a24a
-	defb	02h		;a24b
-	defb	03h		;a24c
-	defb	09h		;a24d
-	defb	04h		;a24e
+	dec c			;a245	0d 	. 
+	ld a,(bc)			;a246	0a 	. 
+	inc c			;a247	0c 	. 
+	ld e,a			;a248	5f 	_ 
+	nop			;a249	00 	. 
+	ld bc,00302h		;a24a	01 02 03 	. . . 
+	add hl,bc			;a24d	09 	. 
+	inc b			;a24e	04 	. 
 la24fh:
 	push bc			;a24f	c5 	. 
 	ld a,c			;a250	79 	y 
 	call la256h		;a251	cd 56 a2 	. V . 
 	pop bc			;a254	c1 	. 
 	ret			;a255	c9 	. 
-
-la256h: ; jump table used in la21e
+la256h:
 	ld hl,la295h		;a256	21 95 a2 	! . . 
 	ld bc,00005h		;a259	01 05 00 	. . . 
 	cpir		;a25c	ed b1 	. . 
-	call z,sub_a28eh		;a25e	cc 8e a2 	. . . 
+;	call z,sub_a28eh		;a25e	cc 8e a2 	. . . 
+	nop
+	nop
+	nop
 	ld c,a			;a261	4f 	O 
 	call sub_a46ah		;a262	cd 6a a4 	. j . 
 la265h:
-	in a,(0f0h)		;a265	db f0 	. .   CRT_ADDR
+	in a,(0f0h)		;a265	db f0 	. . 
 	rlca			;a267	07 	. 
 	jr nc,la265h		;a268	30 fb 	0 . 
 	ld (hl),c			;a26a	71 	q 
@@ -382,7 +354,6 @@ la265h:
 la275h:
 	call sub_a3cch		;a275	cd cc a3 	. . . 
 	ret			;a278	c9 	. 
-
 la279h:
 	xor a			;a279	af 	. 
 	ld e,a			;a27a	5f 	_ 
@@ -400,14 +371,12 @@ la285h:
 	call sub_a3cch		;a287	cd cc a3 	. . . 
 	call sub_a335h		;a28a	cd 35 a3 	. 5 . 
 	ret			;a28d	c9 	. 
-
 sub_a28eh:
 	dec hl			;a28e	2b 	+ 
 	ld bc,00005h		;a28f	01 05 00 	. . . 
 	add hl,bc			;a292	09 	. 
 	ld a,(hl)			;a293	7e 	~ 
 	ret			;a294	c9 	. 
-
 la295h:
 	ld h,b			;a295	60 	` 
 	ld h,c			;a296	61 	a 
@@ -419,30 +388,26 @@ la295h:
 	ld l,b			;a29c	68 	h 
 	ld l,h			;a29d	6c 	l 
 	ld e,(hl)			;a29e	5e 	^ 
-sub_a29fh: ; jump table used in la21e
+sub_a29fh:
 	call sub_a460h		;a29f	cd 60 a4 	. ` . 
 	xor a			;a2a2	af 	. 
 	ld e,a			;a2a3	5f 	_ 
 	ld hl,04606h		;a2a4	21 06 46 	! . F 
 la2a7h:
-	in a,(0f0h)		;a2a7	db f0 	. .   CRT_ADDR
+	in a,(0f0h)		;a2a7	db f0 	. . 
 	rlca			;a2a9	07 	. 
 	jr nc,la2a7h		;a2aa	30 fb 	0 . 
 	ld a,(hl)			;a2ac	7e 	~ 
 	cp 0a5h		;a2ad	fe a5 	. . 
 	jr z,la27bh		;a2af	28 ca 	( . 
 	jr la275h		;a2b1	18 c2 	. . 
-la2b3h: ; jump table used in la21e
 	call sub_a460h		;a2b3	cd 60 a4 	. ` . 
 	jr la27bh		;a2b6	18 c3 	. . 
-
-la2b8: ; jump table used in la21e
-        ; fill screen region with spaces: clear screen
 	ld hl,04000h		;a2b8	21 00 40 	! . @ 
 	ld de,04001h		;a2bb	11 01 40 	. . @ 
 	ld bc,00320h		;a2be	01 20 03 	.   . 
 	ld a,020h		;a2c1	3e 20 	>   
-la2c3h: ; jump table used in la21e
+la2c3h:
 	ld (hl),a			;a2c3	77 	w 
 	cp (hl)			;a2c4	be 	. 
 	jr nz,la2c3h		;a2c5	20 fc 	  . 
@@ -451,7 +416,6 @@ la2c3h: ; jump table used in la21e
 	ld e,d			;a2cc	5a 	Z 
 	call sub_a3cch		;a2cd	cd cc a3 	. . . 
 	ret			;a2d0	c9 	. 
-la2d1h: ; jump table used in la21e
 	call sub_a460h		;a2d1	cd 60 a4 	. ` . 
 	ld a,e			;a2d4	7b 	{ 
 	dec a			;a2d5	3d 	= 
@@ -463,17 +427,15 @@ la2d1h: ; jump table used in la21e
 	call sub_a46ah		;a2df	cd 6a a4 	. j . 
 	ld d,020h		;a2e2	16 20 	.   
 la2e4h:
-	in a,(0f0h)		;a2e4	db f0 	. .   CRT_ADDR
+	in a,(0f0h)		;a2e4	db f0 	. . 
 	rlca			;a2e6	07 	. 
 	jr nc,la2e4h		;a2e7	30 fb 	0 . 
 	ld (hl),d			;a2e9	72 	r 
 	pop af			;a2ea	f1 	. 
 	ret			;a2eb	c9 	. 
-
 la2ech:
 	call sub_a32eh		;a2ec	cd 2e a3 	. . . 
 	ret			;a2ef	c9 	. 
-
 	call sub_a460h		;a2f0	cd 60 a4 	. ` . 
 	ld a,e			;a2f3	7b 	{ 
 	inc a			;a2f4	3c 	< 
@@ -483,14 +445,12 @@ la2f9h:
 	ld e,a			;a2f9	5f 	_ 
 	call sub_a3cch		;a2fa	cd cc a3 	. . . 
 	ret			;a2fd	c9 	. 
-la2fe: ; jump table used in la21e
 	call sub_a460h		;a2fe	cd 60 a4 	. ` . 
 	ld a,e			;a301	7b 	{ 
 	dec a			;a302	3d 	= 
 	cp 0ffh		;a303	fe ff 	. . 
 	jr z,la2ech		;a305	28 e5 	( . 
 	jr la2f9h		;a307	18 f0 	. . 
-la309h: ; jump table used in la21e
 	call sub_a460h		;a309	cd 60 a4 	. ` . 
 	ld a,d			;a30c	7a 	z 
 	dec a			;a30d	3d 	= 
@@ -500,7 +460,6 @@ la312h:
 	ld d,a			;a312	57 	W 
 	call sub_a3cch		;a313	cd cc a3 	. . . 
 	ret			;a316	c9 	. 
-la317h: ; jump table used in la21e
 	call sub_a460h		;a317	cd 60 a4 	. ` . 
 	ld a,d			;a31a	7a 	z 
 	inc a			;a31b	3c 	< 
@@ -512,16 +471,13 @@ sub_a322h:
 la325h:
 	call la1c6h		;a325	cd c6 a1 	. . . 
 	ret			;a328	c9 	. 
-
 sub_a329h:
 	ld hl,la4c1h		;a329	21 c1 a4 	! . . 
 	jr la325h		;a32c	18 f7 	. . 
-
 sub_a32eh:
 	ld hl,00100h		;a32e	21 00 01 	! . . 
 	call 0086eh		;a331	cd 6e 08 	. n . 
 	ret			;a334	c9 	. 
-
 sub_a335h:
 	call sub_a322h		;a335	cd 22 a3 	. " . 
 	ld b,013h		;a338	06 13 	. . 
@@ -530,10 +486,10 @@ sub_a335h:
 la340h:
 	push bc			;a340	c5 	. 
 la341h:
-	in a,(0f0h)		;a341	db f0 	. .   CRT_ADDR
+	in a,(0f0h)		;a341	db f0 	. . 
 	rlca			;a343	07 	. 
 	jr nc,la341h		;a344	30 fb 	0 . 
-	in a,(0f0h)		;a346	db f0 	. .   CRT_ADDR
+	in a,(0f0h)		;a346	db f0 	. . 
 	rlca			;a348	07 	. 
 	jr nc,la341h		;a349	30 f6 	0 . 
 	ld b,028h		;a34b	06 28 	. ( 
@@ -562,7 +518,7 @@ la352h:
 	push bc			;a368	c5 	. 
 	ld c,020h		;a369	0e 20 	.   
 la36bh:
-	in a,(0f0h)		;a36b	db f0 	. .   CRT_ADDR
+	in a,(0f0h)		;a36b	db f0 	. . 
 	rlca			;a36d	07 	. 
 	jr nc,la36bh		;a36e	30 fb 	0 . 
 	ld (hl),c			;a370	71 	q 
@@ -571,7 +527,6 @@ la36bh:
 	call sub_a3f8h		;a373	cd f8 a3 	. . . 
 	call sub_a329h		;a376	cd 29 a3 	. ) . 
 	ret			;a379	c9 	. 
-la37a: ; jump table used in la21e
 	call sub_a460h		;a37a	cd 60 a4 	. ` . 
 	ld a,e			;a37d	7b 	{ 
 	cp 024h		;a37e	fe 24 	. $ 
@@ -583,22 +538,18 @@ la381h:
 	cpir		;a388	ed b1 	. . 
 	jr z,la38eh		;a38a	28 02 	( . 
 	jr la381h		;a38c	18 f3 	. . 
-
 la38eh:
 	ld e,a			;a38e	5f 	_ 
 	call sub_a3cch		;a38f	cd cc a3 	. . . 
 	ret			;a392	c9 	. 
-
 la393h:
 	ld b,00ch		;a393	06 0c 	. . 
 	ld (de),a			;a395	12 	. 
 	jr la3b6h		;a396	18 1e 	. . 
-
 	inc h			;a398	24 	$ 
-la388h: ; jump table used in la21e
 	ld hl,04606h		;a399	21 06 46 	! . F 
 la39ch:
-	in a,(0f0h)		;a39c	db f0 	. .   CRT_ADDR
+	in a,(0f0h)		;a39c	db f0 	. . 
 	rlca			;a39e	07 	. 
 	jr nc,la39ch		;a39f	30 fb 	0 . 
 	ld a,(hl)			;a3a1	7e 	~ 
@@ -606,7 +557,7 @@ la39ch:
 	push hl			;a3a3	e5 	. 
 	ld c,000h		;a3a4	0e 00 	. . 
 la3a6h:
-	in a,(0f0h)		;a3a6	db f0 	. .   CRT_ADDR
+	in a,(0f0h)		;a3a6	db f0 	. . 
 	rlca			;a3a8	07 	. 
 	jr nc,la3a6h		;a3a9	30 fb 	0 . 
 	ld (hl),c			;a3ab	71 	q 
@@ -614,7 +565,7 @@ la3a6h:
 	pop hl			;a3af	e1 	. 
 	pop bc			;a3b0	c1 	. 
 la3b1h:
-	in a,(0f0h)		;a3b1	db f0 	. .   CRT_ADDR
+	in a,(0f0h)		;a3b1	db f0 	. . 
 	rlca			;a3b3	07 	. 
 	jr nc,la3b1h		;a3b4	30 fb 	0 . 
 la3b6h:
@@ -622,7 +573,7 @@ la3b6h:
 	call sub_a46ah		;a3b7	cd 6a a4 	. j . 
 	ld c,020h		;a3ba	0e 20 	.   
 la3bch:
-	in a,(0f0h)		;a3bc	db f0 	. .   CRT_ADDR
+	in a,(0f0h)		;a3bc	db f0 	. . 
 	rlca			;a3be	07 	. 
 	jr nc,la3bch		;a3bf	30 fb 	0 . 
 	ld (hl),c			;a3c1	71 	q 
@@ -632,7 +583,6 @@ la3bch:
 	ld bc,00027h		;a3c5	01 27 00 	. ' . 
 	call sub_a3f8h		;a3c8	cd f8 a3 	. . . 
 	ret			;a3cb	c9 	. 
-
 sub_a3cch:
 	call sub_a471h		;a3cc	cd 71 a4 	. q . 
 	ld a,d			;a3cf	7a 	z 
@@ -648,29 +598,28 @@ la3dah:
 	ld d,a			;a3de	57 	W 
 la3dfh:
 	add hl,de			;a3df	19 	. 
-	ld c,0f0h		;a3e0	0e f0 	. .   CRT_ADDR
+	ld c,0f0h		;a3e0	0e f0 	. . 
 	ld a,00eh		;a3e2	3e 0e 	> . 
 	out (c),a		;a3e4	ed 79 	. y 
 	inc c			;a3e6	0c 	. 
-	out (c),h		;a3e7	ed 61 	. a   CRT_REG
+	out (c),h		;a3e7	ed 61 	. a 
 	dec c			;a3e9	0d 	. 
 	inc a			;a3ea	3c 	< 
-	out (c),a		;a3eb	ed 79 	. y   CRT_ADDR
+	out (c),a		;a3eb	ed 79 	. y 
 	inc c			;a3ed	0c 	. 
-	out (c),l		;a3ee	ed 69 	. i   CRT_REG
+	out (c),l		;a3ee	ed 69 	. i 
 	ld de,04000h		;a3f0	11 00 40 	. . @ 
 	add hl,de			;a3f3	19 	. 
 	call sub_a486h		;a3f4	cd 86 a4 	. . . 
 	ret			;a3f7	c9 	. 
-
 sub_a3f8h:
 	push af			;a3f8	f5 	. 
 	ld b,c			;a3f9	41 	A 
 la3fah:
-	in a,(0f0h)		;a3fa	db f0 	. .   CRT_ADDR
+	in a,(0f0h)		;a3fa	db f0 	. . 
 	rlca			;a3fc	07 	. 
 	jr nc,la3fah		;a3fd	30 fb 	0 . 
-	in a,(0f0h)		;a3ff	db f0 	. .   CRT_ADDR
+	in a,(0f0h)		;a3ff	db f0 	. . 
 	rlca			;a401	07 	. 
 	jr nc,la3fah		;a402	30 f6 	0 . 
 la404h:
@@ -688,7 +637,6 @@ la409h:
 	djnz la404h		;a410	10 f2 	. . 
 	pop af			;a412	f1 	. 
 	ret			;a413	c9 	. 
-
 sub_a414h:
 	push af			;a414	f5 	. 
 	ld a,b			;a415	78 	x 
@@ -715,12 +663,10 @@ la421h:
 	jr z,la431h		;a42c	28 03 	( . 
 	dec c			;a42e	0d 	. 
 	jr la41ch		;a42f	18 eb 	. . 
-
 la431h:
 	pop af			;a431	f1 	. 
 	ret			;a432	c9 	. 
-
-la433h:	; fill screen with gray pattern continuously
+la433h:
 	ld a,(iy+000h)		;a433	fd 7e 00 	. ~ . 
 	cp 000h		;a436	fe 00 	. . 
 	ret z			;a438	c8 	. 
@@ -728,12 +674,10 @@ la433h:	; fill screen with gray pattern continuously
 	call sub_a00ah		;a43a	cd 0a a0 	. . . 
 	inc iy		;a43d	fd 23 	. # 
 	jr la433h		;a43f	18 f2 	. . 
-
-la441h:	; fill screen with gray pattern continuously
+la441h:
 	call la433h		;a441	cd 33 a4 	. 3 . 
 	ld iy,la44ah		;a444	fd 21 4a a4 	. ! J . 
 	jr la433h		;a448	18 e9 	. . 
-
 la44ah:
 	dec c			;a44a	0d 	. 
 	ld a,(bc)			;a44b	0a 	. 
@@ -742,13 +686,13 @@ sub_a44dh:
 	push af			;a44d	f5 	. 
 	push de			;a44e	d5 	. 
 la44fh:
-	in a,(0f0h)		;a44f	db f0 	. .   CRT_ADDR
+	in a,(0f0h)		;a44f	db f0 	. . 
 	rlca			;a451	07 	. 
 	jr nc,la44fh		;a452	30 fb 	0 . 
 	ld e,(hl)			;a454	5e 	^ 
 	inc hl			;a455	23 	# 
 la456h:
-	in a,(0f0h)		;a456	db f0 	. .   CRT_ADDR
+	in a,(0f0h)		;a456	db f0 	. . 
 	rlca			;a458	07 	. 
 	jr nc,la456h		;a459	30 fb 	0 . 
 	ld d,(hl)			;a45b	56 	V 
@@ -756,7 +700,6 @@ la456h:
 	pop de			;a45d	d1 	. 
 	pop af			;a45e	f1 	. 
 	ret			;a45f	c9 	. 
-
 sub_a460h:
 	push hl			;a460	e5 	. 
 	ld hl,04604h		;a461	21 04 46 	! . F 
@@ -764,44 +707,41 @@ sub_a460h:
 	ex de,hl			;a467	eb 	. 
 	pop hl			;a468	e1 	. 
 	ret			;a469	c9 	. 
-
 sub_a46ah:
 	ld hl,04602h		;a46a	21 02 46 	! . F 
 	call sub_a44dh		;a46d	cd 4d a4 	. M . 
 	ret			;a470	c9 	. 
-
 sub_a471h:
 	push af			;a471	f5 	. 
 	push hl			;a472	e5 	. 
 	ld hl,04604h		;a473	21 04 46 	! . F 
 la476h:
-	in a,(0f0h)		;a476	db f0 	. .   CRT_ADDR
+	in a,(0f0h)		;a476	db f0 	. . 
 	rlca			;a478	07 	. 
 	jr nc,la476h		;a479	30 fb 	0 . 
 	ld (hl),e			;a47b	73 	s 
 	inc hl			;a47c	23 	# 
 la47dh:
-	in a,(0f0h)		;a47d	db f0 	. .   CRT_ADDR
+	in a,(0f0h)		;a47d	db f0 	. . 
 	rlca			;a47f	07 	. 
 	jr nc,la47dh		;a480	30 fb 	0 . 
 	ld (hl),d			;a482	72 	r 
 	pop hl			;a483	e1 	. 
 	pop af			;a484	f1 	. 
 	ret			;a485	c9 	. 
-
 sub_a486h:
 	push af			;a486	f5 	. 
 	push de			;a487	d5 	. 
 	ld de,04602h		;a488	11 02 46 	. . F 
 	ex de,hl			;a48b	eb 	. 
 la48ch:
-	in a,(0f0h)		;a48c	db f0 	. .   CRT_ADDR
+	in a,(0f0h)		;a48c	db f0 	. . 
 	rlca			;a48e	07 	. 
 	jr nc,la48ch		;a48f	30 fb 	0 . 
 	ld (hl),e			;a491	73 	s 
 	inc hl			;a492	23 	# 
 la493h:
-	in a,(0f0h)		;a493	db f0 	. .   CRT_ADDR
+	in a,(0f0h)		;a493	db f0 	. . 
 	rlca			;a495	07 	. 
 	jr nc,la493h		;a496	30 fb 	0 . 
 	ld (hl),d			;a498	72 	r 
@@ -809,50 +749,43 @@ la493h:
 	pop de			;a49a	d1 	. 
 	pop af			;a49b	f1 	. 
 	ret			;a49c	c9 	. 
-
-la49dh:		; 6845 config data. alternating register and value
-	defb	00h		;a49d  R0
-	defb	3fh		;a49e
-	defb	01h		;a49f  R1
-	defb	28h		;a4a0
-	defb	02h		;a4a1  R2
-	defb	30h		;a4a2
-	defb	03h		;a4a2  R3
-	defb	05h		;a4a4
-	defb	04h		;a4a5  R4
-	defb	19h		;a4a6
+la49dh:
+	nop			;a49d	00 	. 
+	ccf			;a49e	3f 	? 
+	ld bc,00228h		;a49f	01 28 02 	. ( . 
+	jr nc,la4a7h		;a4a2	30 03 	0 . 
+	dec b			;a4a4	05 	. 
+	inc b			;a4a5	04 	. 
+	add hl,de			;a4a6	19 	. 
 la4a7h:
-	defb	05h		;a4a7  R5
-	defb	0eh		;a4a8
-	defb	06h		;a4a9  R6
-	defb	14h		;a4aa
-	defb	07h		;a4ab  R7
-	defb	17h		;a4ac
-	defb	08h		;a4ad  R8
-	defb	00h		;a4ae
-	defb	09h		;a4af  R9
-	defb	0bh		;a4b0
-	defb	0ah		;a4b1  R10
-	defb	60h		;a4b2
-	defb	0bh		;a4b3  R11
-	defb	0bh		;a4b4
-	defb	0ch		;a4b5  R12
-	defb	00h		;a4b6
-	defb	0dh		;a4b7  R13
-	defb	00h		;a4b8
-	defb	0eh		;a4b9  R14
-	defb	00h		;a4ba
-	defb	0fh		;a4bb  R15
-	defb	00h		;a4bc
-	defb	ffh		;a4bd  end
+	dec b			;a4a7	05 	. 
+	ld c,006h		;a4a8	0e 06 	. . 
+	inc d			;a4aa	14 	. 
+	rlca			;a4ab	07 	. 
+	rla			;a4ac	17 	. 
+	ex af,af'			;a4ad	08 	. 
+	nop			;a4ae	00 	. 
+	add hl,bc			;a4af	09 	. 
+	dec bc			;a4b0	0b 	. 
+	ld a,(bc)			;a4b1	0a 	. 
+	ld h,b			;a4b2	60 	` 
+	dec bc			;a4b3	0b 	. 
+	dec bc			;a4b4	0b 	. 
+	inc c			;a4b5	0c 	. 
+	nop			;a4b6	00 	. 
+	dec c			;a4b7	0d 	. 
+	nop			;a4b8	00 	. 
+	ld c,000h		;a4b9	0e 00 	. . 
+	rrca			;a4bb	0f 	. 
+	nop			;a4bc	00 	. 
+	rst 38h			;a4bd	ff 	. 
 la4beh:
-	defb	0ah		;a4be	R10: Cursor start
-	defb	20h		;a4bf
-	defb	ffh		;a4c0
+	ld a,(bc)			;a4be	0a 	. 
+	jr nz,$+1		;a4bf	20 ff 	  . 
 la4c1h:
-	defb	0ah		;a4c1  R10 
-	defb	60h		;a4c2  
-	defb	ffh		;a4c3  end
+	ld a,(bc)			;a4c1	0a 	. 
+	ld h,b			;a4c2	60 	` 
+	rst 38h			;a4c3	ff 	. 
 	nop			;a4c4	00 	. 
 	nop			;a4c5	00 	. 
 	nop			;a4c6	00 	. 
@@ -865,4 +798,6 @@ la4c1h:
 	nop			;a4cd	00 	. 
 	nop			;a4ce	00 	. 
 	nop			;a4cf	00 	. 
+	defm 'Modified VIOMON 2.0, fjkraan@xs4all.nl, 2013-02-11'
 	rst 38h			;a4d0	ff 	. 
+	rst 38h			;a4d1	ff 	. 
