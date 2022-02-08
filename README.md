@@ -36,10 +36,9 @@ of un-occupied memory (0ff04h - 0ffcch range). It works, but unknown as to
 how or why.
 
 The new code is currently assembled for and tested via the MicroProfessor 
-U7 socket at 02000h as the VIO-MPF-I 1.2 PCB ROM socket is wired for a 2716 
-(2 kByte) and the current code size is close to 4 kByte. The code is 
-uploaded to and executed from the U7 socket with the 
-https://github.com/electrickery/ROM-emulator.
+U7 socket at 02000h. The VIO-MPF-I 1.2 PCB ROM 0A000h socket should work, 
+too, but the extra flatcable of the ROMEmu 
+(https://github.com/electrickery/ROM-emulator) gives problems. 
 
 Screenshot of the first page of the Monitor ROM:
 ![Hex-ASCII dump](./hex-asc-dump.jpg)

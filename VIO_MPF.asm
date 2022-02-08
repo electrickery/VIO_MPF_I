@@ -43,12 +43,10 @@ d460ah:	EQU		0460ah	; 460ah & 460bh - sub_a08ah, sub_a0d2h, sub_a111h, la16ah, l
 ;
 d460ch:	EQU		0460ch	; 460ch & 460dh - sub_a08ah, sub_a0b3h, la19eh (WSINIT)
 
-PBAFLG: EQU     0460Eh
+PBAFLG: EQU     0460Eh  ; Print only ASCII flag. 
 
 DUMPADR:EQU     0461Ah  ; start address for the next memory dump
 LINCNT: EQU     0461Eh  ; counter for lines dumped
-
-TMPBUF: EQU     04640h
 
 ; Control codes
 CRIGHT:	EQU		00h
@@ -64,28 +62,17 @@ d062h:	EQU		062h	;	b
 
 ALFVAL:	EQU		0A5h	; auto LF value
 
-; ffxxh debug or garbage addresses? 
-;d0ff04h
-;d0ff14h     ; 
-;d0ff2bh
-;d0ff81h     ; loaded with 013h in la04ch:
-;d0ff82h     ; loaded with 0ff14h in REGINIT, used in sub_a44dh
-;d0ffcch		; 030h expected @ 0a01ch:
-;
-;REGTAB	EQU		0a49dh
-; 
-
 ; line buffer data
-LINEBUF:   EQU  TMPBUF ; address of line buffer
-ADDRPOS:   EQU  00h  ; address section on line, relative to LINEBUF
-HEXPOS:    EQU  06h  ; hex section on line, relative to LINEBUF
-ASCPOS:    EQU  1Fh  ; ASCII section on line, relative to LINEBUF
-LENDPOS:   EQU  24h  ; end of line position, relative to LINEBUF
-BYTESLIN:  EQU  08h  ; bytes dumped per line
+LINEBUF:EQU     04640h ; address of line buffer
+ADDRPOS:EQU     00h  ; address section on line, relative to LINEBUF
+HEXPOS: EQU     06h  ; hex section on line, relative to LINEBUF
+ASCPOS: EQU     1Fh  ; ASCII section on line, relative to LINEBUF
+LENDPOS:EQU     24h  ; end of line position, relative to LINEBUF
+BYTESLIN:EQU    08h  ; bytes dumped per line
 
-DMPLINES:  EQU  10h  ; lines per dump page
+DMPLINES:EQU    10h  ; lines per dump page
 
-	org	02000h
+	ORG	0A000h
 
 START:
 	JP      JCLS
@@ -782,8 +769,8 @@ HASHBR:
     defb    00h
 
 CLNBUF:
-    ld      hl, TMPBUF
-    ld      de, TMPBUF + 1
+    ld      hl, LINEBUF
+    ld      de, LINEBUF + 1
     ld      bc, COLS
     ld      (hl), ' '
     ldir
@@ -791,7 +778,7 @@ CLNBUF:
     
 SETBOR:
     ld      hl, HASHBR
-    ld      de, TMPBUF
+    ld      de, LINEBUF
     ld      bc, COLS + 1    ; include the 00h
     ldir
     ret
@@ -805,55 +792,55 @@ SPASH:
     ld      iy, HASHBR      ; borders of #' s
     call    JTEXCO
 ;3
-    call    SETBOR          ; load borders to TMPBUF
+    call    SETBOR          ; load borders to LINEBUF
     ld      hl, BRBAN1
-    ld      de, TMPBUF + 3
+    ld      de, LINEBUF + 3
     ld      bc, BRBAN2 - BRBAN1
     ldir
-    ld      iy, TMPBUF
+    ld      iy, LINEBUF
     call    JTEXCO
 ;4
     call    SETBOR
     ld      hl, BRBAN2
-    ld      de, TMPBUF + 3
+    ld      de, LINEBUF + 3
     ld      bc, BRBAN3 - BRBAN2
     ldir
-    ld      iy, TMPBUF
+    ld      iy, LINEBUF
     call    JTEXCO
 ;5
     call    SETBOR
     ld      hl, BRBAN3
-    ld      de, TMPBUF + 3
+    ld      de, LINEBUF + 3
     ld      bc, BRBEND - BRBAN3
     ldir
-    ld      iy, TMPBUF
+    ld      iy, LINEBUF
     call    JTEXCO
 ;6
     call    SETBOR
-    ld      iy, TMPBUF
+    ld      iy, LINEBUF
     call    JTEXCO
 ;7
     ld      hl, MODINF
-    ld      de, TMPBUF + 3
+    ld      de, LINEBUF + 3
     ld      bc, MODIN2 - MODINF
     ldir
-    ld      iy, TMPBUF
+    ld      iy, LINEBUF
     call    JTEXCO
 ;8
     call    SETBOR
     ld      hl, MODIN2
-    ld      de, TMPBUF + 2
+    ld      de, LINEBUF + 2
     ld      bc, MODIN3 - MODIN2
     ldir
-    ld      iy, TMPBUF
+    ld      iy, LINEBUF
     call    JTEXCO
 ;9
     call    SETBOR
     ld      hl, MODIN3
-    ld      de, TMPBUF + 3
+    ld      de, LINEBUF + 3
     ld      bc, MODIEND - MODIN3
     ldir
-    ld      iy, TMPBUF
+    ld      iy, LINEBUF
     call    JTEXCO
 ;10
 
