@@ -35,5 +35,16 @@ The assembly code is not very well understood, and contains multiple usages
 of un-occupied memory (0ff04h - 0ffcch range). It works, but unknown as to
 how or why.
 
+The new code is currently assembled for and tested via the MicroProfessor 
+U7 socket at 02000h as the VIO-MPF-I 2.0 PCB ROM socket is wired for a 2716 
+(2 kByte) and the current code size is close to 4 kByte. The code is 
+uploaded to and executed from the U7 socket with the 
+https://github.com/electrickery/ROM-emulator.
+
 Screenshot of the first page of the Monitor ROM:
 ![Hex-ASCII dump](./hex-asc-dump.jpg)
+
+Schema of the original Bardhele VIDEO-MPF-I:
+![Schema VIDEO-MPF-I](./video-mpf-1.pdf)
+
+
