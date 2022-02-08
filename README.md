@@ -33,9 +33,11 @@ The hardware is configured for 8 bit wide, 11 bit high characters,
 limiting the screen to 40 x 20 characters (PAL timing). A proper video 
 standard is useful as it allows usage of small, cheap TFT screens.
 
-The assembly code is not very well understood, and contains multiple usages
-of un-occupied memory (0ff04h - 0ffcch range). It works, but unknown as to
-how or why.
+The assembly code is not very well understood, and used to contain multiple 
+usages of un-occupied memory (0ff04h - 0ffcch range). It works, as long as
+all unused memory returns 0FFh (EPROM installed). This dead code is now
+succesfully removed now (entry points still work). It may be part of a 
+debugging tool.
 
 The new code is currently assembled for and tested via the MicroProfessor 
 U7 socket at 02000h. The VIO-MPF-I 1.2 PCB ROM 0A000h socket should work, 
