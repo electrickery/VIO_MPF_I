@@ -56,6 +56,7 @@ CLEFT:	EQU		01h
 CUP:	EQU		02h
 CDOWN:	EQU		03h
 BS:		EQU		08h
+TAB:    EQU     09h
 FF:		EQU		0Ch
 LF:		EQU		0Ah
 CR:		EQU		0Dh
@@ -150,20 +151,19 @@ BRBAN3:
 	defm '06 85'
 BRBEND:
 ;    defb 00h
-la16ah:
-	ld hl,0460ah		;a16a	21 0a 46 	! . F 
-	call sub_a44dh		;a16d	cd 4d a4 	. M . 
-	ld b,028h		;a170	06 28 	. ( 
+la16ah:     ;	writes character set to screen
+	ld      hl, 0460ah		;a16a	21 0a 46 	! . F 
+	call    sub_a44dh		;a16d	cd 4d a4 	. M . 
+	ld      b, 028h		;a170	06 28 	. ( 
 la172h:
-	ld (hl),020h		;a172	36 20 	6   
-	inc hl			;a174	23 	# 
-	djnz la172h		;a175	10 fb 	. . 
-	call la106h		;a177	cd 06 a1 	. . . 
-	ld hl,0460ah		;a17a	21 0a 46 	! . F 
-	call sub_a44dh		;a17d	cd 4d a4 	. M . 
-;	ld (0ff82h),hl		;a180	22 82 ff 	" . . 	; debug?
-	call sub_a188h		;a183	cd 88 a1 	. . . 
-	RET		;a186	18 98 	. . 
+	ld      (hl), 020h		;a172	36 20 	6   
+	inc     hl			;a174	23 	# 
+	djnz    la172h		;a175	10 fb 	. . 
+	call    la106h		;a177	cd 06 a1 	. . . 
+	ld      hl, 0460ah		;a17a	21 0a 46 	! . F 
+	call    sub_a44dh		;a17d	cd 4d a4 	. M . 
+	call    sub_a188h		;a183	cd 88 a1 	. . . 
+	RST		0 
 	
 sub_a188h:
 	ld hl,00c5dh		;a188	21 5d 0c 	! ] . 
@@ -181,9 +181,7 @@ la197h:
 	call la106h		;a19a	cd 06 a1 	. . . 
 	ret			;a19d	c9 	. 
 	
-	; init 6845, clear screen, return from call
-	;
-WSINIT:
+WSINIT:     ; init 6845, clear screen, return from call
 la19eh:
 	ld de,0ff04h		;a19e	11 04 ff 	. . . debug ?
 	ld bc,0ff2bh		;a1a1	01 2b ff 	. + . debug ?
@@ -226,7 +224,7 @@ la1c8h:
 	inc hl			;a1d4	23 	# 
 	jr NEXTREG		;a1d5	18 f1 	. . 
 	
-la1d7h:
+la1d7h:             ;	writes character set to screen
 	ld c,00ch		;a1d7	0e 0c 	. . Form feed
 	call JCRTCO		;a1d9	cd 0a a0 	. . . 
 	ld c,000h		;a1dc	0e 00 	. . 
@@ -247,7 +245,7 @@ la1f3h:
 	jr nz,la1f3h		;a1f7	20 fa 	  . next char. 
 	jp 00000h		;a1f9	c3 00 00 	. . . Back to monitor
 	
-la1fch:
+la1fch:     ;	(JCRTCO) print character in C, interpret control codes
 	push iy			;a1fc	fd e5 	. . 
 	push ix			;a1fe	dd e5 	. . 
 	push hl			;a200	e5 	. 
@@ -263,12 +261,12 @@ la1fch:
 	pop iy			;a20d	fd e1 	. . 
 	ret				;a20f	c9 	. 
 	
-sub_a210h:
-	ld a,c			;a210	79 	y 
-	ld bc,0000ah		;a211	01 0a 00 	. . . 
-	ld hl,la245h		;a214	21 45 a2 	! E . 
+sub_a210h:      ; search text for control characters in CTRCHR table
+	ld a, c			;a210	79 	y 
+	ld bc, CCEND - CTRCHR		;a211	01 0a 00 	. . . 
+	ld hl, CTRCHR		;a214	21 45 a2 	! E . 
 	cpir			;a217	ed b1 	. . 
-	jr z,la21eh		;a219	28 03 	( . 
+	jr z, la21eh		;a219	28 03 	( . 
 	jp la256h		;a21b	c3 56 a2 	. V . 
 	
 la21eh:
@@ -308,15 +306,19 @@ la22eh:
 	jp la256h		;a242	c3 56 a2 	. V . 
 	
 la245h:
-	dec c			;a245	0d 	. 
-	ld a,(bc)			;a246	0a 	. 
-	inc c			;a247	0c 	. 
-	ld e,a			;a248	5f 	_ 
-	nop				;a249	00 	. 
-	ld bc,00302h		;a24a	01 02 03 	. . . 
-	add hl,bc			;a24d	09 	. 
-	inc b			;a24e	04 	. 
-    
+CTRCHR:
+    DEFB        CR
+    DEFB        LF
+    DEFB        FF
+    DEFB        5Fh
+    DEFB        00h
+    DEFB        01h
+    DEFB        02h
+    DEFB        03h
+    DEFB        TAB
+    DEFB        04h        
+CCEND:
+
 la24fh:     ; JCRTOU start
 	push bc			;a24f	c5 	. 
 	ld a,c			;a250	79 	y 
@@ -325,13 +327,6 @@ la24fh:     ; JCRTOU start
 	ret				;a255	c9 	. 
 	
 la256h:
-;	ld hl,CHRTRNS		;a256	21 95 a2 	! . . 
-;	ld bc,00005h		;a259	01 05 00 	. . . 	translation table size
-;	cpir			;a25c	ed b1 	. . 
-;	call z,sub_a28eh		;a25e	cc 8e a2 	. . . character mangling [`afg to afhi^
-;	nop
-;	nop
-;	nop
 	ld c,a			;a261	4f 	O 
 	call sub_a46ah		;a262	cd 6a a4 	. j . 
 la265h:
@@ -366,32 +361,6 @@ la285h:
 	call sub_a3cch		;a287	cd cc a3 	. . . 
 	call sub_a335h		;a28a	cd 35 a3 	. 5 . 
 	ret				;a28d	c9 	. 
-	
-sub_a28eh:	;	substitute key by value
-	dec hl			;a28e	2b 	+ 
-	ld bc,00005h		;a28f	01 05 00 	. . . 
-	add hl,bc			;a292	09 	. 
-	ld a,(hl)			;a293	7e 	~ 
-	ret				;a294	c9 	. 
-	
-CHRTRNS:
-la295h:		; character translation table
-;	ld h,b		;a295	60 	` 
-;	ld h,c		;a296	61 		a 
-;	ld h,(hl)	;a297	66 	f 
-;	ld h,a		;a298	67 		g 
-;	ld e,e		;a299	5b 	[ 
-;	ld h,c		;a29a	61 		a 
-;	ld h,(hl)	;a29b	66 	f 
-;	ld l,b		;a29c	68 		h 
-;	ld l,h		;a29d	6c 	l 
-;	ld e,(hl)	;a29e	5e 		^ 
-;         key, value
-;	defb	27h, a
-;	defb	f, g
-;	defb	[, a
-;	defb	f, h
-;	defb	l, ^
 	
 sub_a29fh:
 	call sub_a460h		;a29f	cd 60 a4 	. ` . 
@@ -521,7 +490,7 @@ la352h:
 	push de			;a35e	d5 	. 
 	pop hl			;a35f	e1 	. 
 	inc de			;a360	13 	. 
-	ld bc,00028h		;a361	01 28 00 	. ( . 
+	ld bc, COLS		;a361	01 28 00 	. ( . 
 	ld b,000h		;a364	06 00 	. . 
 	dec c			;a366	0d 	. 
 	push af			;a367	f5 	. 
@@ -697,7 +666,7 @@ la441h:
 	jr la433h		;a448	18 e9 	. . 
 	
 la44ah:	; table for line end 
-	defb	0dh, 0ah, 00h
+	defb	CR, LF, 00h
 	
 sub_a44dh: ; write de to video memory pointed to by hl.
 	push af			;a44d	f5 	. 
@@ -933,38 +902,39 @@ MODIEND:
   
   
 MEMDUMP:
-            LD      A, DMPLINES
-            LD      (LINCNT), A
+        CALL    CRLF        ; start at a new line
+        LD      A, DMPLINES
+        LD      (LINCNT), A
             
 MDNXT:            
-            CALL    CLNBUF
-            LD      BC, (DUMPADR)
-            CALL    NXTLIN      ; 
-            LD      A, BYTESLIN
-            CALL    ADDSOME
-            LD      (DUMPADR), BC
+        CALL    CLNBUF
+        LD      BC, (DUMPADR)
+        CALL    NXTLIN      ; 
+        LD      A, BYTESLIN
+        CALL    ADDSOME
+        LD      (DUMPADR), BC
             
-            LD      A, (LINCNT)
-            DEC     A
-            JR      Z, DONEDMP
-            LD      (LINCNT), A
-            JR      MDNXT
+        LD      A, (LINCNT)
+        DEC     A
+        JR      Z, DONEDMP
+        LD      (LINCNT), A
+        JR      MDNXT
             
 DONEDMP:
-            RST     0
+        RST     0
             
 ADDSOME:
 ; Add A to BC
-            PUSH    HL
-            LD      L, A
-            LD      A, C
-            ADD     A, L
-            LD      C, A
-            JR      NC, MDNBI
-            INC     B
+        PUSH    HL
+        LD      L, A
+        LD      A, C
+        ADD     A, L
+        LD      C, A
+        JR      NC, MDNBI
+        INC     B
 MDNBI:
-            POP     HL
-            RET
+        POP     HL
+        RET
 
 NXTLIN:
 
