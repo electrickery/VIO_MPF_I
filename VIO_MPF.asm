@@ -1,4 +1,6 @@
-; 
+; VIOMON 2.2 - based on disassembled Bardhele ROM
+
+VERSION:EQU    '2.2'
 
 ;6545 CRT status register (same address as address register):
 ;
@@ -10,16 +12,47 @@
 ;   +------------- 0 - no LP event since last read of R16 & R17
 ;                  1 - LP event occurred since last read
 
+; MC6845 register ports
 CRTA:	EQU		0f0h
 CRTD:	EQU		0f1h
 
+; screen gometry
 COLS:	EQU		028h ; 40 char per line
-CHROWS:	EQU		018h ; 24 lines
+CHROWS:	EQU		014h ; 20 lines
+
+; Video RAM
+SCREEN:	EQU		04000h
+d45ffh:	EQU		045FFh
+SCRNSIZ:EQU     COLS * CHROWS
+VRAMSZ: EQU     07FFh
+
+;Work space
+d4600h:	EQU		04600h
+AUTOLF:	EQU		04601h	; Flag for Auto Line Feed after Carriage Return
+
+; memory address of cursor
+d4602h:  EQU    04602h  ; Updated but never read - sub_a46ah, sub_a486h
+d4603h:  EQU    04603h  ; Updated but never read
+
+; position of cursor on screen
+COLPOS:  EQU    04604h  ; Updated but never read
+ROWPOS:  EQU    04605h  ; Updated but never read
+; 
+d460ah:	EQU		0460ah	; 460ah & 460bh - sub_a08ah, sub_a0d2h, sub_a111h, la16ah, la19eh (WSINIT)
+;
+d460ch:	EQU		0460ch	; 460ch & 460dh - sub_a08ah, sub_a0b3h, la19eh (WSINIT)
+
+PBAFLG: EQU     0460Eh
+
+DUMPADR:EQU     0461Ah  ; start address for the next memory dump
+LINCNT: EQU     0461Eh  ; counter for lines dumped
+
+TMPBUF: EQU     04640h
 
 ; Control codes
 CRIGHT:	EQU		00h
 CLEFT:	EQU		01h
-CUP:		EQU		02h
+CUP:	EQU		02h
 CDOWN:	EQU		03h
 BS:		EQU		08h
 FF:		EQU		0Ch
@@ -27,25 +60,7 @@ LF:		EQU		0Ah
 CR:		EQU		0Dh
 d062h:	EQU		062h	;	b
 
-;Display range
-d4000h:	EQU		04000h
-d45ffh:	EQU		045FFh
-
-;Work space
-d4600h:	EQU		04600h
-AUTOLF:	EQU		04601h	; Flag for Auto Line Feed after Carriage Return
-
-d4602h:  EQU     04602h  ; Updated but never read
-d4603h:  EQU     04603h  ; Updated but never read
-COLPOS:  EQU     04604h  ; Updated but never read
-ROWPOS:  EQU     04605h  ; Updated but never read
-
-d460ah:	EQU		0460ah	; 460ah & 460bh - 
-d460ch:	EQU		0460ch	; 460ch & 460dh - 
-
 ALFVAL:	EQU		0A5h	; auto LF value
-
-TMPBUF: EQU     4700h
 
 ; ffxxh debug or garbage addresses? 
 ;d0ff04h
@@ -57,6 +72,17 @@ TMPBUF: EQU     4700h
 ;
 ;REGTAB	EQU		0a49dh
 ; 
+
+; line buffer data
+LINEBUF:   EQU  TMPBUF ; address of line buffer
+ADDRPOS:   EQU  00h  ; address section on line, relative to LINEBUF
+HEXPOS:    EQU  06h  ; hex section on line, relative to LINEBUF
+ASCPOS:    EQU  1Fh  ; ASCII section on line, relative to LINEBUF
+LENDPOS:   EQU  24h  ; end of line position, relative to LINEBUF
+BYTESLIN:  EQU  08h  ; bytes dumped per line
+
+DMPLINES:  EQU  10h  ; lines per dump page
+
 	org	02000h
 
 START:
@@ -72,28 +98,32 @@ JINICR:
 	jp la1c0h		;a007	c3 c0 a1 	. . . 
 	
 JCRTCO:
-sub_a00ah:			;					(JCRTCO) print character in C, interpret control codes
-	jp la1fch		;a00a	c3 fc a1 	. . . 
+sub_a00ah:			;	(JCRTCO) print character in C, interpret control codes
+	jp la1fch		;a00a
 	
 JCRTOU:
-sub_a00dh:			;					(JCRTOU) print character in C, print codes 00h-31h too
-	jp la24fh		;a00d	c3 4f a2 	. O . 
+sub_a00dh:			;	(JCRTOU) print character in C, print codes 00h-31h too
+	jp la24fh		;a00d
 	
-JTEXCO:				;					(JTEXCO) print 00h terminated string (start in IY)
-	jp la433h		;a010	c3 33 a4 	. 3 . 
+JTEXCO:				;	(JTEXCO) print 00h terminated string (start in IY).
+	jp la433h		;a010
 	
-					;					(JTEX??) print 00h terminated string (start in IY) CR = LF
-	jp la441h		;a013	c3 41 a4 	. A . 
+JTEXCLN:			;	(JTEXCNL) print 00h terminated string (start in IY). Add line end: CR LF
+	jp la441h		;a013
 	
-					;					writes character set to screen
-	jp la1d7h		;a016	c3 d7 a1 	. . . 
+JVIDTE: 			;	writes character set to screen
+	jp la1d7h		;a016 
     
-    jp SPASH
-	
 REGINIT:
-sub_a019h:			;					configure 6845 with register/data table in HL (FFh terminated)
-	jp SETREG		;a019	c3 c6 a1 	. . . 
-	
+sub_a019h:			;	configure 6845 with register/data table in HL (FFh terminated)
+	jp SETREG		;a019
+
+SPLASH_:    
+    jp SPASH        ;a01c
+
+MEMDMP_:
+    jp  MEMDUMP
+    
 la01ch:		; debug? up to la032h
 	pop af			;a01c	f1 	. 
 	push af			;a01d	f5 	. 
@@ -155,7 +185,7 @@ la074h:
 	jr la074h		;a07a	18 f8 	. . 
 la07ch:	; debug?
 	ld (hl),000h		;a07c	36 00 	6 . 
-	ld iy,0ff04h		;a07e	fd 21 04 ff 	. ! . . debug?
+	ld iy, 0ff04h		;a07e	fd 21 04 ff 	. ! . . debug?
 	jp la441h		;a082	c3 41 a4 	. A . 
 	pop hl			;a085	e1 	. 
 	pop bc			;a086	c1 	. 
@@ -164,7 +194,7 @@ la07ch:	; debug?
 	
 sub_a08ah:
 	ld bc,(0ff82h)		;a08a	ed 4b 82 ff 	. K . . 	; debug?
-	ld hl,0460ah		;a08e	21 0a 46 	! . F 
+	ld hl, 0460ah		;a08e	21 0a 46 	! . F 
 	call sub_a44dh		;a091	cd 4d a4 	. M . 
 	ld a,b			;a094	78 	x 
 	cp h			;a095	bc 	. 
@@ -323,6 +353,10 @@ la19eh:
 	ld a,ALFVAL		;a1b7	3e a5 	> . 	; Auto LF
 	ld (AUTOLF),a		;a1b9	32 01 46 	2 . F 
 	ld (04600h),a		;a1bc	32 00 46 	2 . F 
+    ld  a, 01h
+    ld  (PBAFLG), a
+    LD      BC, 00h
+    LD      (DUMPADR), BC
 	ret			;a1bf	c9 	. 
 	
 	; init 6845, clear screen, jump to 0000h
@@ -531,10 +565,10 @@ la2a7h:
 	jr la275h		;a2b1	18 c2 	. . 
 	call sub_a460h		;a2b3	cd 60 a4 	. ` . 
 	jr la27bh		;a2b6	18 c3 	. . 
-	ld hl,04000h		;a2b8	21 00 40 	! . @ 
-	ld de,04001h		;a2bb	11 01 40 	. . @ 
-	ld bc,00320h		;a2be	01 20 03 	.   . 
-	ld a,020h		;a2c1	3e 20 	>   
+	ld hl,SCREEN		;a2b8	21 00 40 	! . @ 
+	ld de,SCREEN + 1	;a2bb	11 01 40 	. . @ 
+	ld bc,SCRNSIZ		;a2be	01 20 03 	.   . 
+	ld a, ' '		;a2c1	3e 20 	>   
 la2c3h:
 	ld (hl),a			;a2c3	77 	w ; space to 04000h
 	cp (hl)			;a2c4	be 	. 
@@ -614,7 +648,7 @@ sub_a32eh:
 sub_a335h:
 	call sub_a322h		;a335	cd 22 a3 	. " . 
 	ld b,013h		;a338	06 13 	. . 
-	ld de,04000h		;a33a	11 00 40 	. . @ 
+	ld de,SCREEN		;a33a	11 00 40 	. . @ 
 	ld hl,04028h		;a33d	21 28 40 	! ( @ 
 la340h:
 	push bc			;a340	c5 	. 
@@ -743,7 +777,7 @@ la3dfh:
 	out (c),a		;a3eb	ed 79 	. y ; select R15 Cursor Address (Low) 
 	inc c			;a3ed	0c 	.       ; CRTD
 	out (c),l		;a3ee	ed 69 	. i ; write l to R15
-	ld de,04000h		;a3f0	11 00 40 	. . @ ; start video ram
+	ld de,SCREEN		;a3f0	11 00 40 	. . @ ; start video ram
 	add hl,de			;a3f3	19 	. 
 	call sub_a486h		;a3f4	cd 86 a4 	. . . ; store c in 4602h
 	ret				;a3f7	c9 	. 
@@ -820,9 +854,6 @@ la441h:
 	jr la433h		;a448	18 e9 	. . 
 	
 la44ah:	; table for line end 
-;	dec c			;a44a	0d 	. 
-;	ld a,(bc)			;a44b	0a 	. 
-;	nop				;a44c	00 	. 
 	defb	0dh, 0ah, 00h
 	
 sub_a44dh: ; write de to video memory pointed to by hl.
@@ -846,7 +877,7 @@ la456h:
 	
 sub_a460h: 
 	push hl			;a460	e5 	. 
-	ld hl,04604h		;a461	21 04 46 	! . F 
+	ld hl,COLPOS		;a461	21 04 46 	! . F 
 	call sub_a44dh		;a464	cd 4d a4 	. M . 
 	ex de,hl			;a467	eb 	. 
 	pop hl			;a468	e1 	. 
@@ -857,21 +888,21 @@ sub_a46ah:
 	call sub_a44dh		;a46d	cd 4d a4 	. M . 
 	ret				;a470	c9 	. 
 	
-sub_a471h:  ; ? update 04604h & 04605h with CRT data ?
+sub_a471h:  ; update COLPOS & ROWPOS with CRT data
 	push af			;a471	f5 	. 
 	push hl			;a472	e5 	. 
-	ld hl,04604h		;a473	21 04 46 	! . F 
+	ld hl,COLPOS		;a473	21 04 46 	! . F 
 la476h:
 	in a,(CRTA)		;a476	db f0 	. . 
 	rlca			;a478	07 	. 
 	jr nc,la476h		;a479	30 fb 	0 . ; wait for 6545 blank
-	ld (hl),e			;a47b	73 	s 
+	ld (hl),e			;a47b	73 	; write COLPOS
 	inc hl			;a47c	23 	# 
 la47dh:
 	in a,(CRTA)		;a47d	db f0 	. . 
 	rlca			;a47f	07 	. 
 	jr nc,la47dh		;a480	30 fb 	0 . ; wait for 6545 blank
-	ld (hl),d			;a482	72 	r 
+	ld (hl),d			;a482	72 	; write ROWPOS
 	pop hl			;a483	e1 	. 
 	pop af			;a484	f1 	. 
 	ret				;a485	c9 	. 
@@ -997,7 +1028,7 @@ SPASH:
 ;8
     call    SETBOR
     ld      hl, MODIN2
-    ld      de, TMPBUF + 3
+    ld      de, TMPBUF + 2
     ld      bc, MODIN3 - MODIN2
     ldir
     ld      iy, TMPBUF
@@ -1040,29 +1071,207 @@ SPASH:
     ld      iy, HASHLN      ; line with all #' s
     call    JTEXCO
 
-
-
     rst     0
 
-	nop			;a4c4	00 	. 
-	nop			;a4c5	00 	. 
-	nop			;a4c6	00 	. 
-	nop			;a4c7	00 	. 
-	nop			;a4c8	00 	. 
-	nop			;a4c9	00 	. 
-	nop			;a4ca	00 	. 
-	nop			;a4cb	00 	. 
-	nop			;a4cc	00 	. 
-	nop			;a4cd	00 	. 
-	nop			;a4ce	00 	. 
-	nop			;a4cf	00 	. 
+
 MODINF:
-	defm 'Modified VIOMON 2.1'
+    defm 'VIOMON '
+    defm 'v 2.2'
 MODIN2:
-    defm 'fjkraan@electrickeryl.nl'
+    defm 'http://www.electrickeryl.nl/comp/mpf1'
 MODIN3:
-    defm '2021-11-14'
+    defm '2022-02-07'
 MODIEND:
 	defb	00h
 	rst 38h			;a4d0	ff 	. 
 	rst 38h			;a4d1	ff 	. 
+  
+  
+MEMDUMP:
+            LD      A, DMPLINES
+            LD      (LINCNT), A
+            
+MDNXT:            
+            CALL    CLNBUF
+            LD      BC, (DUMPADR)
+            CALL    NXTLIN      ; 
+            LD      A, BYTESLIN
+            CALL    ADDSOME
+            LD      (DUMPADR), BC
+            
+            LD      A, (LINCNT)
+            DEC     A
+            JR      Z, DONEDMP
+            LD      (LINCNT), A
+            JR      MDNXT
+            
+DONEDMP:
+            RST     0
+            
+ADDSOME:
+; Add A to BC
+            PUSH    HL
+            LD      L, A
+            LD      A, C
+            ADD     A, L
+            LD      C, A
+            JR      NC, MDNBI
+            INC     B
+MDNBI:
+            POP     HL
+            RET
+
+NXTLIN:
+
+; Write address to line buffer
+; init: BC contains the address
+;       IX contains the start address for the dump
+; exit:
+; destroys: AF, IX
+;
+        PUSH    BC
+        PUSH    DE
+        PUSH    HL
+        PUSH    IX
+        PUSH    IY
+        LD      IX, LINEBUF
+        LD      A, B
+        CALL    BYTE2HEX
+        LD      (IX+0), D
+        INC     IX
+        LD      (IX+0), E
+        INC     IX
+        LD      A, C
+        CALL    BYTE2HEX
+        LD      (IX+0), D
+        INC     IX
+        LD      A, E
+        LD      (IX+0), E
+        
+; Write values to line buffer
+; init: IX points to target HEX location MSN
+;       IY points to target ASCII location 
+;       BC points to source location
+;       HL contains the memory bytes to dump per line (H assumed 0)
+; exit:
+; destroys: DE, HL
+;
+; 
+        LD      L, BYTESLIN
+        LD      IX, LINEBUF
+        LD      IY, LINEBUF
+        
+NXTVAL1:
+        LD      A, (BC)
+        CALL    BYTE2HEX
+        LD      (IX+HEXPOS), D
+        INC     IX
+        LD      (IX+HEXPOS), E
+        INC     IX
+        INC     IX              ; add space between hex values
+;        LD      A, L
+;        CP      5
+;        JR      NZ, NVNOSP
+;        INC     IX              ; extra space between groups of four
+;NVNOSP:
+        LD      A, (BC)         ; reload the value for ASCII dump
+        CALL    PRTBL
+        LD      (IY+ASCPOS), A
+        INC     IY
+        INC     BC
+        DEC     L
+        LD      A, L
+        CP      0h
+        JR      NZ, NXTVAL1
+
+DONEVAL:
+
+; Add line terminator
+        LD      HL, LINEBUF + COLS -1
+        LD      A, 0
+        LD      (HL), A
+
+; Call printLine
+        LD      IY, LINEBUF
+        CALL    JTEXCLN
+
+        POP    IY
+        POP    IX
+        POP    HL
+        POP    DE
+        POP    BC
+        
+        RET     ; NXTLN
+
+; BYTE2HEX - Converts a byte to two ASCII hexadecimal bytes
+; init: A  - contains the byte
+; exit: DE - contain the hex values
+; destroys: AF
+BYTE2HEX:
+        PUSH    AF
+        AND     0F0h
+        RRCA
+        RRCA
+        RRCA
+        RRCA
+
+        CALL    NIB2HEX
+        LD      D, A
+        POP     AF
+        AND     0Fh
+        CALL    NIB2HEX      
+        LD      E, A
+        RET
+ 
+; NIB2HEX - converts a nibble to an ASCII hexadecimal char
+; init: A  - contains the nibble
+; exit: A  - contains the hex char
+NIB2HEX:
+        ADD     A, '0'
+        CP      ':'
+        JR      C, N2H1
+        ADD     A, 7
+N2H1:
+        RET
+
+; PRTBL - make character printable; replace < 32 and > 127 by '.'
+; init: A  - character to filter
+; exit: A  - optionally filtered character
+PRTBL:
+        PUSH    BC
+        LD      C, A
+        LD      A, (PBAFLG)
+        CP      0
+        LD      A, C
+        POP     BC
+        JR      Z, PBPASS   ; pass all char
+        CP      ' '
+        JR      C, PRDOT    ; before ' ', 20h
+        CP      '~'
+        JR      NC, PRDOT   ; after '~', 7Eh
+        RET                 ; between 1Fh and 7Fh
+PRDOT: 
+        LD      A, '.'
+        RET
+PBPASS:
+        RET
+ 
+CLNLNBF:        ; clean line buffer
+        PUSH    AF
+        PUSH    BC
+        PUSH    DE
+        PUSH    HL
+        LD      A, ' '
+        LD      (LINEBUF), A
+        LD      HL, LINEBUF
+        LD      DE, LINEBUF
+        INC     DE
+        LD      BC, COLS
+        LDIR
+        POP     HL
+        POP     DE
+        POP     BC
+        POP     AF
+        RET
+
+

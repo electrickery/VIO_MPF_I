@@ -25,6 +25,11 @@ These are the most interesting entry addresses:
 
 * 0a019h:   init 6845, clear screen, print banner, rst 0
 
-The hardware is configured for 8 bit wide, 11 bit high characters, 
-limiting the screen to 40 x 20 characters (PAL timing).
+* 0a01Fh:   hex/ascii dump of 8 * 16 bytes, rst 0
 
+The hardware is configured for 8 bit wide, 11 bit high characters, 
+limiting the screen to 40 x 20 characters (PAL timing). A proper video 
+standard is useful as it allows usage of small, cheap TFT screens.
+
+Screenshot of the first page of the Monitor ROM:
+![Hex-ASCII dump](./hex-asc-dump.jpg)
