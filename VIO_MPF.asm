@@ -23,7 +23,8 @@ CHROWS:	EQU		014h ; 20 lines
 ; Video RAM
 SCREEN:	EQU		04000h
 d45ffh:	EQU		045FFh
-SCRNSIZ:EQU     COLS * CHROWS
+SCRNSIZ:EQU     00600h
+DISPSIZ:EQU     COLS * CHROWS
 VRAMSZ: EQU     07FFh
 
 ;Work space
@@ -86,8 +87,8 @@ DMPLINES:  EQU  10h  ; lines per dump page
 	org	02000h
 
 START:
-	and l			;a000	a5 	. ; garbage?
-	jp la01ch		;a001	c3 1c a0 	. . . ; terminates with ret
+	JP      JCLS
+    NOP
 	
 CINIT:
 sub_a004h:			;					init 6845, clear screen, return from call
@@ -124,172 +125,14 @@ SPLASH_:
 MEMDMP_:
     jp  MEMDUMP
     
-la01ch:		; debug? up to la032h
-	pop af			;a01c	f1 	. 
-	push af			;a01d	f5 	. 
-	cp 062h			;a01e	fe 62 	. b 
-	jp nz,la032h		;a020	c2 32 a0 	. 2 . 	; skip some code (if not 'b'?)
-	ld a,(0ffcch)		;a023	3a cc ff 	: . . 
-	cp 030h			;a026	fe 30 	. 0 
-	jr nz,la032h		;a028	20 08 	  . . 		; skip some code (if not '0'?)
-	push hl			;a02a	e5 	. 
-	ld hl,0ff14h		;a02b	21 14 ff 	! . . 
-	ld (0ff82h),hl		;a02e	22 82 ff 	" . . 
-	pop hl			;a031	e1 	. 
-la032h:
-	push hl			;a032	e5 	. 
-	ld hl,AUTOLF		;a033	21 01 46 	! . F 
-	ld a,(hl)			;a036	7e 	~ 
-	cp ALFVAL			;a037	fe a5 	. . 
-	call nz,sub_a004h		;a039	c4 04 a0 	. . . 
-	ld hl,04600h		;a03c	21 00 46 	! . F 
-la03fh:
-	in a,(0f0h)		;a03f	db f0 	. . 
-	rlca			;a041	07 	. 
-	jr nc,la03fh		;a042	30 fb 	0 . ; again, wait until ready?
-	ld a,(hl)			;a044	7e 	~ 
-	cp ALFVAL			;a045	fe a5 	. . 
-	jp z,la04ch		;a047	ca 4c a0 	. L . 
-	pop hl			;a04a	e1 	. 
-	ret				;a04b	c9 	. 
-	
-la04ch:		; garbage
-	pop hl			;a04c	e1 	. 
-	push bc			;a04d	c5 	. 
-	push de			;a04e	d5 	. 
-	push hl			;a04f	e5 	. 
-	push ix			;a050	dd e5 	. . 
-	push iy			;a052	fd e5 	. . 
-	call sub_a08ah		;a054	cd 8a a0 	. . . 
-	ld hl,0ff81h		;a057	21 81 ff 	! . . debug?
-	ld (hl),013h		;a05a	36 13 	6 . 
-	call sub_a111h		;a05c	cd 11 a1 	. . . 
-	call sub_a0b3h		;a05f	cd b3 a0 	. . . 
-	call sub_a0d2h		;a062	cd d2 a0 	. . . 
-	pop iy			;a065	fd e1 	. . 
-	pop ix			;a067	dd e1 	. . 
-	pop hl			;a069	e1 	. 
-	pop de			;a06a	d1 	. 
-	pop bc			;a06b	c1 	. 
-	ret				;a06c	c9 	. 
-	
-	push iy			;a06d	fd e5 	. . 
-	push bc			;a06f	c5 	. 
-	push hl			;a070	e5 	. 
-	ld hl,0ff04h		;a071	21 04 ff 	! . . debug?
-la074h:
-	ld a,(hl)			;a074	7e 	~ 
-	cp 00dh			;a075	fe 0d 	. . 
-	jr z,la07ch		;a077	28 03 	( . ; if a == 0 ready
-	inc hl			;a079	23 	# 
-	jr la074h		;a07a	18 f8 	. . 
-la07ch:	; debug?
-	ld (hl),000h		;a07c	36 00 	6 . 
-	ld iy, 0ff04h		;a07e	fd 21 04 ff 	. ! . . debug?
-	jp la441h		;a082	c3 41 a4 	. A . 
-	pop hl			;a085	e1 	. 
-	pop bc			;a086	c1 	. 
-	pop iy			;a087	fd e1 	. . 
-	ret				;a089	c9 	. 
-	
-sub_a08ah:
-	ld bc,(0ff82h)		;a08a	ed 4b 82 ff 	. K . . 	; debug?
-	ld hl, 0460ah		;a08e	21 0a 46 	! . F 
-	call sub_a44dh		;a091	cd 4d a4 	. M . 
-	ld a,b			;a094	78 	x 
-	cp h			;a095	bc 	. 
-	jr z,la0b2h		;a096	28 1a 	( . 
-	cp 0ffh			;a098	fe ff 	. . 
-	jr z,la0a4h		;a09a	28 08 	( . 
-	ld de,0fe4bh		;a09c	11 4b fe 	. K . 
-	ld bc,0fe72h		;a09f	01 72 fe 	. r . 
-	jr la0aah		;a0a2	18 06 	. . 
-la0a4h:
-	ld de,0ff04h		;a0a4	11 04 ff 	. . . 	; debug?
-	ld bc,0ff2bh		;a0a7	01 2b ff 	. + . 	; debug?
-la0aah:
-	ld (0460ah),de		;a0aa	ed 53 0a 46 	. S . F 
-	ld (0460ch),bc		;a0ae	ed 43 0c 46 	. C . F 
-la0b2h:
-	ret				;a0b2	c9 	. 
-	
-sub_a0b3h:
-	ld de,(0ff82h)		;a0b3	ed 5b 82 ff 	. [ . . 	; debug?
-	ld hl,0460ch		;a0b7	21 0c 46 	! . F 
-	call sub_a44dh		;a0ba	cd 4d a4 	. M . 
-	xor a			;a0bd	af 	. 
-	sbc hl,de		;a0be	ed 52 	. R 
-	dec l			;a0c0	2d 	- 
-	cp l			;a0c1	bd 	. 
-	ret z			;a0c2	c8 	. 
-	ld b,l			;a0c3	45 	E 
-	inc de			;a0c4	13 	. 
-la0c5h:
-	ld a,(de)			;a0c5	1a 	. 
-	cp 00dh			;a0c6	fe 0d 	. . 
-	jr z,la0ceh		;a0c8	28 04 	( . 
-	inc de			;a0ca	13 	. 
-	djnz la0c5h		;a0cb	10 f8 	. . 
-	ret				;a0cd	c9 	. 
-	
-la0ceh:
-	ex de,hl			;a0ce	eb 	. 
-	ld (hl),000h		;a0cf	36 00 	6 . 
-	ret				;a0d1	c9 	. 
-	
-sub_a0d2h:
-	ld c,004h		;a0d2	0e 04 	. . 
-	call JCRTCO		;a0d4	cd 0a a0 	. . . 
-	ld hl,0460ah		;a0d7	21 0a 46 	! . F 
-	call sub_a44dh		;a0da	cd 4d a4 	. M . 
-	ld de,(0ff82h)		;a0dd	ed 5b 82 ff 	. [ . . 	; debug?
-la0e1h:
-	call sub_a0fdh		;a0e1	cd fd a0 	. . . 
-	jr z,la0f6h		;a0e4	28 10 	( . 
-	ld a,(hl)			;a0e6	7e 	~ 
-	cp 00dh			;a0e7	fe 0d 	. . 
-	jr z,la106h		;a0e9	28 1b 	( . 
-	ld c,a			;a0eb	4f 	O 
-	push de			;a0ec	d5 	. 
-	push hl			;a0ed	e5 	. 
-	call sub_a210h		;a0ee	cd 10 a2 	. . . 
-	pop hl			;a0f1	e1 	. 
-	pop de			;a0f2	d1 	. 
-	inc hl			;a0f3	23 	# 
-	jr la0e1h		;a0f4	18 eb 	. . 
-la0f6h:
-	ld a,(hl)			;a0f6	7e 	~ 
-	cp 00dh			;a0f7	fe 0d 	. . 
-	call z,la106h		;a0f9	cc 06 a1 	. . . 
-	ret				;a0fc	c9 	. 
-	
-sub_a0fdh:
-	push hl			;a0fd	e5 	. 
-	push de			;a0fe	d5 	. 
-	and a			;a0ff	a7 	. 
-	ex de,hl			;a100	eb 	. 
-	sbc hl,de		;a101	ed 52 	. R 
-	pop de			;a103	d1 	. 
-	pop hl			;a104	e1 	. 
-	ret			;a105	c9 	. 
-	
+
 CRLF:
 la106h:
-	ld c,00dh		;a106	0e 0d 	. . 
-	call JCRTCO		;a108	cd 0a a0 	. . . 
-	ld c,00ah		;a10b	0e 0a 	. . 
-	call JCRTCO		;a10d	cd 0a a0 	. . . 
+	ld      c, CR		;a106	0e 0d 	. . 
+	call    JCRTCO		;a108	cd 0a a0 	. . . 
+	ld      c, LF		;a10b	0e 0a 	. . 
+	call    JCRTCO		;a10d	cd 0a a0 	. . . 
 	ret			;a110	c9 	. 
-	
-sub_a111h:
-	ld hl,0460ah		;a111	21 0a 46 	! . F 
-	call sub_a44dh		;a114	cd 4d a4 	. M . 
-	ld bc,00015h		;a117	01 15 00 	. . . 
-	ld a,02ah		;a11a	3e 2a 	> * 
-	cpir		;a11c	ed b1 	. . 	Find *
-	jr z,la121h		;a11e	28 01 	( . 
-la120h:
-	ret			;a120	c9 	. 
 	
 la121h:
 	dec hl			;a121	2b 	+ 
@@ -318,9 +161,9 @@ la172h:
 	call la106h		;a177	cd 06 a1 	. . . 
 	ld hl,0460ah		;a17a	21 0a 46 	! . F 
 	call sub_a44dh		;a17d	cd 4d a4 	. M . 
-	ld (0ff82h),hl		;a180	22 82 ff 	" . . 	; debug?
+;	ld (0ff82h),hl		;a180	22 82 ff 	" . . 	; debug?
 	call sub_a188h		;a183	cd 88 a1 	. . . 
-	jr la120h		;a186	18 98 	. . 
+	RET		;a186	18 98 	. . 
 	
 sub_a188h:
 	ld hl,00c5dh		;a188	21 5d 0c 	! ] . 
@@ -354,7 +197,7 @@ la19eh:
 	ld (AUTOLF),a		;a1b9	32 01 46 	2 . F 
 	ld (04600h),a		;a1bc	32 00 46 	2 . F 
     ld  a, 01h
-    ld  (PBAFLG), a
+    LD      (PBAFLG), a
     LD      BC, 00h
     LD      (DUMPADR), BC
 	ret			;a1bf	c9 	. 
@@ -567,7 +410,7 @@ la2a7h:
 	jr la27bh		;a2b6	18 c3 	. . 
 	ld hl,SCREEN		;a2b8	21 00 40 	! . @ 
 	ld de,SCREEN + 1	;a2bb	11 01 40 	. . @ 
-	ld bc,SCRNSIZ		;a2be	01 20 03 	.   . 
+	ld bc,DISPSIZ		;a2be	01 20 03 	.   . 
 	ld a, ' '		;a2c1	3e 20 	>   
 la2c3h:
 	ld (hl),a			;a2c3	77 	w ; space to 04000h
@@ -944,6 +787,7 @@ la4a7h:
 	defb	09h, 00bh	; R9  Maximum Raster Address
 	defb	0ah, 060h	; R10 Cursor Start Raster
 	defb	0bh, 00bh	; R11 Cursor End Raster
+CURRST:
 	defb	0ch, 000h	; R12 Display Start Address (High)
 	defb	0dh, 000h	; R13 Display Start Address (Low)
 	defb	0eh, 000h	; R14 Cursor Address (High)
@@ -960,6 +804,7 @@ la4c1h:
     defb    00ah, 060h  ; cursor blink on
     defb    0ffh
     
+   
 HASHLN:
     defm    '########################################'
     defb    00h
@@ -1274,4 +1119,14 @@ CLNLNBF:        ; clean line buffer
         POP     AF
         RET
 
-
+JCLS:
+        LD      A, ' '
+        LD      (SCREEN), A
+        LD      HL, SCREEN
+        LD      DE, SCREEN
+        INC     DE
+        LD      BC, SCRNSIZ
+        LDIR
+        LD      HL, CURRST
+        JP      SETREG
+;        RST     0
