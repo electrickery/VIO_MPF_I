@@ -9,6 +9,8 @@ VIO.zip are the hex dumps of the original ROMs that came with the card.
 
 These are the most interesting entry addresses:
 
+* 0a000h:   clear screen, reset cursor 
+
 * 0a004h:	init 6845, clear screen, return from call
  
 * 0a007h:	init 6845, clear screen, jump to 0000h
