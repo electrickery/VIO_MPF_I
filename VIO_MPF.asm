@@ -31,15 +31,15 @@ VRAMSZ: EQU     07FFh
 d4600h:	EQU		04600h
 AUTOLF:	EQU		04601h	; Flag for Auto Line Feed after Carriage Return
 
-; memory address of cursor
+; memory address of cursor; print location JCRTCO, ...
 d4602h:  EQU    04602h  ; Updated but never read - sub_a46ah, sub_a486h
 d4603h:  EQU    04603h  ; Updated but never read
 
 ; position of cursor on screen
 COLPOS:  EQU    04604h  ; Updated but never read
 ROWPOS:  EQU    04605h  ; Updated but never read
-; 
-d460ah:	EQU		0460ah	; 460ah & 460bh - sub_a08ah, sub_a0d2h, sub_a111h, la16ah, la19eh (WSINIT)
+;
+VIDMEMP:	EQU		0460ah	; 460ah & 460bh - sub_a08ah, sub_a0d2h, sub_a111h, la16ah, la19eh (WSINIT)
 ;
 d460ch:	EQU		0460ch	; 460ch & 460dh - sub_a08ah, sub_a0b3h, la19eh (WSINIT)
 
@@ -59,6 +59,7 @@ FF:		EQU		0Ch
 LF:		EQU		0Ah
 CR:		EQU		0Dh
 d062h:	EQU		062h	;	b
+PARTERM:EQU     0FFh
 
 ALFVAL:	EQU		0A5h	; auto LF value
 
@@ -72,11 +73,13 @@ BYTESLIN:EQU    08h  ; bytes dumped per line
 
 DMPLINES:EQU    10h  ; lines per dump page
 
-	ORG	0A000h
+ROM:    EQU     0A000h
+
+        ORG     ROM
 
 START:
-	JP      JCLS
-    NOP
+	CALL      JCLS
+    RST       0
 	
 CINIT:
 sub_a004h:			;					init 6845, clear screen, return from call
@@ -101,7 +104,7 @@ JTEXCLN:			;	(JTEXCNL) print 00h terminated string (start in IY). Add line end: 
 	jp la441h		;a013
 	
 JVIDTE: 			;	writes character set to screen
-	jp la1d7h		;a016 
+	jp CHRSET		;a016 
     
 REGINIT:
 sub_a019h:			;	configure 6845 with register/data table in HL (FFh terminated)
@@ -139,15 +142,15 @@ BRBAN3:
 BRBEND:
 ;    defb 00h
 la16ah:     ;	writes character set to screen
-	ld      hl, 0460ah		;a16a	21 0a 46 	! . F 
+	ld      hl, VIDMEMP		;a16a	21 0a 46 	! . F 
 	call    sub_a44dh		;a16d	cd 4d a4 	. M . 
 	ld      b, 028h		;a170	06 28 	. ( 
 la172h:
-	ld      (hl), 020h		;a172	36 20 	6   
+	ld      (hl), ' '		;a172	36 20 	6   
 	inc     hl			;a174	23 	# 
 	djnz    la172h		;a175	10 fb 	. . 
 	call    la106h		;a177	cd 06 a1 	. . . 
-	ld      hl, 0460ah		;a17a	21 0a 46 	! . F 
+	ld      hl, VIDMEMP		;a17a	21 0a 46 	! . F 
 	call    sub_a44dh		;a17d	cd 4d a4 	. M . 
 	call    sub_a188h		;a183	cd 88 a1 	. . . 
 	RST		0 
@@ -170,37 +173,39 @@ la197h:
 	
 WSINIT:     ; init 6845, clear screen, return from call
 la19eh:
-	ld de,0ff04h		;a19e	11 04 ff 	. . . debug ?
-	ld bc,0ff2bh		;a1a1	01 2b ff 	. + . debug ?
-	ld (0460ah),de		;a1a4	ed 53 0a 46 	. S . F 
-	ld (0460ch),bc		;a1a8	ed 43 0c 46 	. C . F 
-	ld hl,REGTAB		;a1ac	21 9d a4 	! . . 
-	call REGINIT		;a1af	cd 19 a0 	. . . 
+	ld de, SCREEN		;a19e	11 04 ff 	. . . 
+	ld bc,0ff2bh		;a1a1	01 2b ff 	. + . 
+	ld (VIDMEMP), de		;a1a4	ed 53 0a 46 	. S . F 
+	ld (0460ch), bc		;a1a8	ed 43 0c 46 	. C . F 
+	ld hl, REGTAB		;a1ac	21 9d a4 	! . . 
+	call REGINIT		;a1af	cd 19 a0 	. . .   config 6845
 	ld c,00ch		;a1b2	0e 0c 	. . 
 	call JCRTCO		;a1b4	cd 0a a0 	. . . 
-	ld a,ALFVAL		;a1b7	3e a5 	> . 	; Auto LF
+	ld a, ALFVAL		;a1b7	3e a5 	> . 
 	ld (AUTOLF),a		;a1b9	32 01 46 	2 . F 
 	ld (04600h),a		;a1bc	32 00 46 	2 . F 
-    ld  a, 01h
+    ld      a, 01h
     LD      (PBAFLG), a
     LD      BC, 00h
+    LD      (d4602h), BC
     LD      (DUMPADR), BC
 	ret			;a1bf	c9 	. 
 	
 	; init 6845, clear screen, jump to 0000h
 	;
 la1c0h:
-	call WSINIT		;a1c0	cd 9e a1 	. . . 
-	jp 00000h		;a1c3	c3 00 00 	. . . 
+	call    WSINIT		;a1c0	cd 9e a1 	. . . 
+    call    JCLS
+	RST     0		;a1c3	c3 00 00 	. . . 
 	
 ; Load table with register numbers and values into the CRT registers
 SETREG:
 la1c6h:
-	ld c,CRTA		;a1c6	0e f0 	. . 
+	ld c, CRTA		;a1c6	0e f0 	. . 
 NEXTREG:
 la1c8h:
 	ld a,(hl)			;a1c8	7e 	~ 
-	cp 0ffh			;a1c9	fe ff 	. . 
+	cp PARTERM			;a1c9	fe ff 	. . 
 	ret z			;a1cb	c8 	. 	; Done NEXTREG
 	out (c),a		;a1cc	ed 79 	. y 
 	inc hl			;a1ce	23 	# 
@@ -211,25 +216,27 @@ la1c8h:
 	inc hl			;a1d4	23 	# 
 	jr NEXTREG		;a1d5	18 f1 	. . 
 	
+CHRSET:
 la1d7h:             ;	writes character set to screen
-	ld c,00ch		;a1d7	0e 0c 	. . Form feed
+	ld c, FF		;a1d7	0e 0c 	. . insert Form feed
 	call JCRTCO		;a1d9	cd 0a a0 	. . . 
 	ld c,000h		;a1dc	0e 00 	. . 
-la1deh:
+CHRS1:             ; iterate from 00h to 07Fh
 	call JCRTOU		;a1de	cd 0d a0 	. . . 
 	inc c			;a1e1	0c 	. 
 	ld a,c			;a1e2	79 	y 
 	cp 080h			;a1e3	fe 80 	. . 
-	jr nz,la1deh		;a1e5	20 f7 	  next char. 
-	ld c,00dh		;a1e7	0e 0d 	. . 
+	jr nz, CHRS1		;a1e5	20 f7 	  next char (< 80h). 
+    
+	ld c, CR		;a1e7	0e 0d 	. . ;insert CR & LF
 	call JCRTCO		;a1e9	cd 0a a0 	. . . 
-	ld c,00ah		;a1ec	0e 0a 	. . 
+	ld c, LF		;a1ec	0e 0a 	. . 
 	call JCRTCO		;a1ee	cd 0a a0 	. . . 
 	ld c,080h		;a1f1	0e 80 	. . 
-la1f3h:
+CHRS2:             ; iterate from 80h to FFh
 	call JCRTOU		;a1f3	cd 0d a0 	. . . 
 	inc c			;a1f6	0c 	. 
-	jr nz,la1f3h		;a1f7	20 fa 	  . next char. 
+	jr nz, CHRS2		;a1f7	20 fa 	  . next char. 
 	jp 00000h		;a1f9	c3 00 00 	. . . Back to monitor
 	
 la1fch:     ;	(JCRTCO) print character in C, interpret control codes
@@ -253,55 +260,50 @@ sub_a210h:      ; search text for control characters in CTRCHR table
 	ld bc, CCEND - CTRCHR		;a211	01 0a 00 	. . . 
 	ld hl, CTRCHR		;a214	21 45 a2 	! E . 
 	cpir			;a217	ed b1 	. . 
-	jr z, la21eh		;a219	28 03 	( . 
-	jp la256h		;a21b	c3 56 a2 	. V . 
+	jr z, la21eh		;a219	28 03 	( . control-character 
+	jp la256h		;a21b	c3 56 a2 	. V . printable character
 	
-la21eh:
+la21eh:     ; CTRCHR character found, handle it
 	ld hl,la22eh		;a21e	21 2e a2 	! . . 
 	ld a,c			;a221	79 	y 
-	and 00fh		;a222	e6 0f 	. . 
-	add a,a			;a224	87 	. 
+	and 00fh		;a222	e6 0f 	. . just the lower nibble
+	add a,a			;a224	87 	.       multiply by 2
 	ld c,a			;a225	4f 	O 
 	ld b,000h		;a226	06 00 	. . 
-	add hl,bc			;a228	09 	. 
-	ld e,(hl)			;a229	5e 	^ 
+	add hl,bc			;a228	09 	.   add doubled char value to pointer
+	ld e,(hl)			;a229	5e 	^   get the table value LSB
 	inc hl			;a22a	23 	# 
-	ld d,(hl)			;a22b	56 	V 
+	ld d,(hl)			;a22b	56 	V   get table MSB
 	ex de,hl			;a22c	eb 	. 
 	jp (hl)			;a22d	e9 	. 
 	
-la22eh:
-	sbc a,c			;a22e	99 	. 
-	and e			;a22f	a3 	. 
-	ld a,d			;a230	7a 	z 
-	and e			;a231	a3 	. 
-	rla				;a232	17 	. 
-	and e			;a233	a3 	. 
-	add hl,bc			;a234	09 	. 
-	and e			;a235	a3 	. 
-	cp 0a2h			;a236	fe a2 	. . 
-	ret p			;a238	f0 	. 
-	and d			;a239	a2 	. 
-	pop de			;a23a	d1 	. 
-	and d			;a23b	a2 	. 
-	cp b			;a23c	b8 	. 
-	and d			;a23d	a2 	. 
-	or e			;a23e	b3 	. 
-	and d			;a23f	a2 	. 
-	sbc a,a			;a240	9f 	. 
-	and d			;a241	a2 	. 
-	jp la256h		;a242	c3 56 a2 	. V . 
-	
+la22eh:     ; jump table used in la21e
+chrjp1:
+	defw sub_a399h		;a22e	 	. a399h ? 00h 
+	defw sub_a37ah		;a230	 	z a37ah ? 01h > 02h
+	defw sub_a317h		;a232	 	. a317h ? 02h > 04h
+	defw sub_a309h		;a234	 	. a309h ? 03h > 06h
+la236h:
+	defw la236h		    ;a236	 	. .  a2feh ?? 
+la238h: ; jump table used in la21e
+	defw sub_a2f0h		;a238	 	.  a238h ?
+	defw sub_a2d1h		;a23a	 	.  a2d1h ?
+	defw sub_a2b8h		;a23c	 	.  a2b8h ?
+	defw sub_a2b3h		;a23e	 	.  a2b3h ?
+	defw sub_a29fh  	;a240	 	.  a29fh ?
+	defw la256h 		;a242	 	. V .  a256h ?
+    
 la245h:
 CTRCHR:
-    DEFB        CR
-    DEFB        LF
-    DEFB        FF
-    DEFB        5Fh
-    DEFB        00h
-    DEFB        01h
-    DEFB        02h
-    DEFB        03h
+    DEFB        CR  ;   0Dh 
+    DEFB        LF  ;   0Ah
+    DEFB        FF  ;   0Ch
+;    DEFB        5Fh ;   (5)Fh
+    DEFB        BS  ;   08h
+    DEFB        00h ; cursor right
+    DEFB        01h ; cursor left
+    DEFB        02h ; cursor up
+    DEFB        03h ; cursor down
     DEFB        TAB
     DEFB        04h        
 CCEND:
@@ -313,7 +315,7 @@ la24fh:     ; JCRTOU start
 	pop bc			;a254	c1 	. 
 	ret				;a255	c9 	. 
 	
-la256h:
+la256h:     ; non-CTRCHR character, write to screen memory
 	ld c,a			;a261	4f 	O 
 	call sub_a46ah		;a262	cd 6a a4 	. j . 
 la265h:
@@ -337,7 +339,7 @@ la279h:
 la27bh:
 	ld a,d			;a27b	7a 	z 
 	inc a			;a27c	3c 	< 
-	ld b,014h		;a27d	06 14 	. . Char rows 14h = 20 ?
+	ld b, CHROWS		;a27d	06 14 	. . lines on display
 	cp b			;a27f	b8 	. 
 	jr z,la285h		;a280	28 03 	( . 
 	ld d,a			;a282	57 	W 
@@ -362,8 +364,10 @@ la2a7h:
 	cp ALFVAL		;a2ad	fe a5 	. . 
 	jr z,la27bh		;a2af	28 ca 	( . 
 	jr la275h		;a2b1	18 c2 	. . 
+sub_a2b3h:
 	call sub_a460h		;a2b3	cd 60 a4 	. ` . 
 	jr la27bh		;a2b6	18 c3 	. . 
+sub_a2b8h:
 	ld hl,SCREEN		;a2b8	21 00 40 	! . @ 
 	ld de,SCREEN + 1	;a2bb	11 01 40 	. . @ 
 	ld bc,DISPSIZ		;a2be	01 20 03 	.   . 
@@ -377,6 +381,8 @@ la2c3h:
 	ld e,d			;a2cc	5a 	Z 
 	call sub_a3cch		;a2cd	cd cc a3 	. . . 
 	ret				;a2d0	c9 	. 
+    
+sub_a2d1:
 	call sub_a460h		;a2d1	cd 60 a4 	. ` . 
 	ld a,e			;a2d4	7b 	{ 
 	dec a			;a2d5	3d 	= 
@@ -386,9 +392,9 @@ la2c3h:
 	call sub_a3cch		;a2db	cd cc a3 	. . . 
 	push af			;a2de	f5 	. 
 	call sub_a46ah		;a2df	cd 6a a4 	. j . 
-	ld d,020h		;a2e2	16 20 	.   
+	ld d, ' '		;a2e2	16 20 	.   
 la2e4h:
-	in a,(0f0h)		;a2e4	db f0 	. . 
+	in a,(CRTA)		;a2e4	db f0 	. . 
 	rlca			;a2e6	07 	. 
 	jr nc,la2e4h		;a2e7	30 fb 	0 . 
 	ld (hl),d			;a2e9	72 	r 
@@ -398,6 +404,8 @@ la2e4h:
 la2ech:
 	call sub_a32eh		;a2ec	cd 2e a3 	. . . 
 	ret				;a2ef	c9 	. 
+    
+sub_a2f0h:
 	call sub_a460h		;a2f0	cd 60 a4 	. ` . 
 	ld a,e			;a2f3	7b 	{ 
 	inc a			;a2f4	3c 	< 
@@ -413,6 +421,8 @@ la2f9h:
 	cp 0ffh			;a303	fe ff 	. . 
 	jr z,la2ech		;a305	28 e5 	( . 
 	jr la2f9h		;a307	18 f0 	. . 
+    
+sub_a309h:
 	call sub_a460h		;a309	cd 60 a4 	. ` . 
 	ld a,d			;a30c	7a 	z 
 	dec a			;a30d	3d 	= 
@@ -422,6 +432,8 @@ la312h:
 	ld d,a			;a312	57 	W 
 	call sub_a3cch		;a313	cd cc a3 	. . . 
 	ret				;a316	c9 	. 
+    
+sub_a317h:
 	call sub_a460h		;a317	cd 60 a4 	. ` . 
 	ld a,d			;a31a	7a 	z 
 	inc a			;a31b	3c 	< 
@@ -482,7 +494,7 @@ la352h:
 	dec c			;a366	0d 	. 
 	push af			;a367	f5 	. 
 	push bc			;a368	c5 	. 
-	ld c,020h		;a369	0e 20 	.   
+	ld c, ' '		;a369	0e 20 	.   
 la36bh:
 	in a,(CRTA)		;a36b	db f0 	. . 
 	rlca			;a36d	07 	. 
@@ -493,9 +505,11 @@ la36bh:
 	call sub_a3f8h		;a373	cd f8 a3 	. . . 
 	call sub_a329h		;a376	cd 29 a3 	. ) . 
 	ret				;a379	c9 	. 
+    
+sub_a37ah:
 	call sub_a460h		;a37a	cd 60 a4 	. ` . 
 	ld a,e			;a37d	7b 	{ 
-	cp 024h			;a37e	fe 24 	. $ 
+	cp COLS			;a37e	fe 24 	. $ 
 	ret nc			;a380	d0 	. 
 la381h:
 	inc a			;a381	3c 	< 
@@ -513,7 +527,10 @@ la393h:
 	ld b,00ch		;a393	06 0c 	. . 
 	ld (de),a			;a395	12 	. 
 	jr la3b6h		;a396	18 1e 	. . 
+    
 	inc h			;a398	24 	$ 
+    
+sub_a399h:
 	ld hl,04606h		;a399	21 06 46 	! . F 
 la39ch:
 	in a,(CRTA)		;a39c	db f0 	. . 
@@ -538,7 +555,7 @@ la3b1h:
 la3b6h:
 	ld (hl),b			;a3b6	70 	p 
 	call sub_a46ah		;a3b7	cd 6a a4 	. j . 
-	ld c,020h		;a3ba	0e 20 	.   
+	ld c, ' '		;a3ba	0e 20 	.   
 la3bch:
 	in a,(CRTA)		;a3bc	db f0 	. . 
 	rlca			;a3be	07 	. 
@@ -557,7 +574,7 @@ sub_a3cch:  ; calculate and store new cursor address in CRT R14/R15
 	ld hl,00000h		;a3d0	21 00 00 	! . . 
 	or a			;a3d3	b7 	. 
 	jr z,la3dfh		;a3d4	28 09 	( . 
-	ld bc,COLS		;a3d6	01 28 00 	. ( . 
+	ld bc, COLS		;a3d6	01 28 00 	. ( . 
 	ld b,l			;a3d9	45 	E 
 la3dah:
 	add hl,bc			;a3da	09 	. 
@@ -581,25 +598,22 @@ la3dfh:
 	call sub_a486h		;a3f4	cd 86 a4 	. . . ; store c in 4602h
 	ret				;a3f7	c9 	. 
 	
-sub_a3f8h:
+sub_a3f8h:      ; read CRT register status (6545) 
 	push af			;a3f8	f5 	. 
 	ld b,c			;a3f9	41 	A 
 la3fah:
 	in a,(CRTA)		;a3fa	db f0 	. . 
 	rlca			;a3fc	07 	. 
 	jr nc,la3fah		;a3fd	30 fb 	0 . ; try again1
-	in a,(CRTA)		;a3ff	db f0 	. . 
-	rlca			;a401	07 	. 
-	jr nc,la3fah		;a402	30 f6 	0 . ; try again1
 la404h:
 	ld a,(hl)			;a404	7e 	~ 
 	cp (hl)			;a405	be 	. 
-	jr nz,la404h		;a406	20 fc 	  .  ; try again2
+;	jr nz,la404h		;a406	20 fc 	  .  ; try again2 - this looped
 	ex de,hl			;a408	eb 	. 
 la409h:
 	ld (hl),a			;a409	77 	w 
 	cp (hl)			;a40a	be 	. 
-	jr nz,la409h		;a40b	20 fc 	  .  ; try again3
+;	jr nz,la409h		;a40b	20 fc 	  .  ; try again3 - this looped
 	ex de,hl			;a40d	eb 	. 
 	inc hl			;a40e	23 	# 
 	inc de			;a40f	13 	. 
@@ -642,6 +656,7 @@ la433h: ; write buffer to video (JCRTCO) until a 0 is found
 	ld a,(iy+000h)		;a433	fd 7e 00 	. ~ . 
 	cp 000h			;a436	fe 00 	. . 
 	ret z			;a438	c8 	. 				; 00h found, done printing, return from call
+    
 	ld c,a			;a439	4f 	O 
 	call JCRTCO		;a43a	cd 0a a0 	. . .	; print it
 	inc iy			;a43d	fd 23 	. # 		; update cursor pos
@@ -649,9 +664,10 @@ la433h: ; write buffer to video (JCRTCO) until a 0 is found
 	
 la441h:
 	call la433h		;a441	cd 33 a4 	. 3 . 
-	ld iy,la44ah		;a444	fd 21 4a a4 	. ! J . 
-	jr la433h		;a448	18 e9 	. . 
+	ld iy, LINEND		;a444	fd 21 4a a4 	. ! J . 
+	jr la433h		;a448	18 e9 	. . Add line end
 	
+LINEND:
 la44ah:	; table for line end 
 	defb	CR, LF, 00h
 	
@@ -683,7 +699,7 @@ sub_a460h:
 	ret				;a469	c9 	. 
 	
 sub_a46ah:
-	ld hl,04602h		;a46a	21 02 46 	! . F 
+	ld hl,d4602h		;a46a	21 02 46 	! . F 
 	call sub_a44dh		;a46d	cd 4d a4 	. M . 
 	ret				;a470	c9 	. 
 	
@@ -709,7 +725,7 @@ la47dh:
 sub_a486h:  ; ? update 04602h & 04603h with CRT data ?
 	push af			;a486	f5 	. 
 	push de			;a487	d5 	. 
-	ld de,04602h		;a488	11 02 46 	. . F 
+	ld de,d4602h		;a488	11 02 46 	. . F 
 	ex de,hl			;a48b	eb 	. 
 la48ch:
 	in a,(CRTA)		;a48c	db f0 	. . 
@@ -748,17 +764,17 @@ CURRST:
 	defb	0dh, 000h	; R13 Display Start Address (Low)
 	defb	0eh, 000h	; R14 Cursor Address (High)
 	defb	0fh, 000h	; R15 Cursor Address (Low) 
-	defb	0ffh		; table terminator
+	defb	PARTERM		; table terminator
 
 CURSOF:
 la4beh:
     defb    00ah, 020h  ; cursor off
-    defb    0ffh
+    defb    PARTERM
 
 CRSBLON:    
 la4c1h:
     defb    00ah, 060h  ; cursor blink on
-    defb    0ffh
+    defb    PARTERM
     
    
 HASHLN:
@@ -1085,5 +1101,5 @@ JCLS:
         LD      BC, SCRNSIZ
         LDIR
         LD      HL, CURRST
-        JP      SETREG
+        RET
 ;        RST     0
