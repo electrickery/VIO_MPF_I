@@ -298,7 +298,7 @@ CTRCHR:
     DEFB        CR  ;   0Dh 
     DEFB        LF  ;   0Ah
     DEFB        FF  ;   0Ch
-;    DEFB        5Fh ;   (5)Fh
+;    DEFB        5Fh ;   (5)Fh '_' ?
     DEFB        BS  ;   08h
     DEFB        00h ; cursor right
     DEFB        01h ; cursor left
