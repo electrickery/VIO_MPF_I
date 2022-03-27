@@ -1,0 +1,110 @@
+Connecting the VID-MPF-I
+
+I)	Power supply:
+	The VID-MPF-I has the same barrel type power connector as the MPF-I and the same polarity.
+	- Voltage	7.5 - 9V
+	- Ampere	??? A
+	- Polarity	Center is positive
+	The board accepts a 7805, and has some room for a heat sink, but a switching module is usually smaller and produces less heat than the linear 7805. It allows for higher input voltages without overheating.
+
+II)	MPF-I:
+	No changes have to be made to the MPF-I or MPF-IB board. But if other extensions are connected, make sure they don't interfere with the memory and I/O requirements of the VIO-MPF-I: ROM: A000h-AFFFh, RAM: 4000h-47FFh, I/O: F0-F1h
+
+III)Installation instructions
+	Connecting the VID-MPF-I is done with a 40 pin flatcable. 
+	- Switch off all connected power supplies.
+	- When using the original enclosure for the MPF-I and the VIO-MPF-I on the top left side of the enclosure, the length of the flatcable (distance between connectors) has to be at least 10 cm. 
+	- Connect a PAL compatible composite monitor to the vodeo output.
+	- Switch on the power supply of the VIO-MPF-I first and then the MPF-I power supply. The MPF-I should behave just like in the original configuration.
+	- Run the routine at A000h. The monitor should display an empty screen with a blinking cursor in the top-left. Adjust the monitor controls if not.
+	- Run the routine at A01Ch. The monitor should display a screen-filling banner. Adjust the monitor controls to make sure all rows and columns are visible.
+
+IV)	When the configuration isn't working reliable, and each board has its own power supply, an extra ground line between the two power supplies can help stabilize it. The single ground pin between MPF-I and VID-MPF-I can be insufficient for a video-signal producing board as the VID-MPF-I.
+
+
+Preliminary remarks
+
+The VID-MPF-I card makes it possible to connect a display monitor to the MPF-I. The routines in the VID-MPF-I ROM show some of the possibilities of a video interface for the MPF-I configuration. The ROM routines are still being developed, but at the same time allows the user to create his or her own ideas. The assembly lising is available online so it is easy to inspect and extend the firmware. The firmware routines need not be confined to the VID-MPF-I board, so the current maximum ROM size is not a limitation. The RAM, which should be accessible to the MC6845 CRT is bound to the board.
+
+Debugging programs is made much easier with the VID-MPF-I. It allows a memory dump in hex and ASCII, per 128 byte page (JP A01Fh). A full register dump (from the single stepper) is also possible, displaying all registers at the same time instead of one at the time with the Monitor.
+
+The display monitor must be capable of interfacing with a monochrome PAL-compatible video signal. As the timing is very close to the PAL-standard cheap TFT-monitors will work very well.
+
+Configuring the video interface. These routines return to the monitor after completion. Below the calls to be used in user programs are described
+
+1.)	Video with BAS-signal (PAL compatible) for dislpay monitor - 40 characters x 20 rows
+
+		[RS]
+		[ADDR] A 0 0 7		A.0.0.7 C3
+		[GO]
+
+		Enter start address 0A007h and press GO-key.
+		The display is cleared and initialised for 40x20 characters
+
+2.) Write character set to the screen
+
+		[RS]
+		[ADDR] A 0 1 6		A.0.1.6 C3
+		[GO]
+
+		Enter start address 08016h and press GO-key.
+		All available charcters are printed to the screen, both normal and inverse.
+
+3.) Show display size and credentials
+
+		[RS]
+		[ADDR] A 0 1 C		A.0.1.C C3
+		[GO]
+
+		Enter start address 0801Ch and press GO-key.
+		An ASCII border is shown outlining the screen size. The credentials are shown
+		inside the border.
+
+4.) Memory dump
+
+		
+		[RS]
+		[ADDR] A 0 1 F		A.0.1.F C3
+		[GO]
+
+		Enter start address 0801Fh and press GO-key.
+		The memory contents from 0000h to 007Fh is written to the display in both HEX and ASCII. The start address of the dump can be placed in memory locations 0461Eh-0461Fh. For example:
+
+		[RS]
+		[ADDR] 461Eh
+		[DATA] A0
+		[+]	   00
+		[ADDR] A 0 1 F		A.0.1.F C3
+		[GO]
+
+Calls implemented in the ROM, to be used from user programs:
+
+1.)	Clear screen call
+
+		CALL	0A000h		Clears screen, puts cursor in the top left corner
+
+2.) Initialises the MC6845 CRT
+
+		CALL	0A004h		The display is cleared and initialised for 40x20 characters
+
+3.) Write the character in the C register to the screen at the cursor position. Control characters (00h-1Fh) are interpreted.
+
+		LD		C, @
+		CALL	0A00Ah		The character is shown at the cursor position. The cursor is moved one position to the right for non-control characters. 
+
+4.) Write the character in the C register to the screen at the cursor position. Control characters are not interpreted as special, but printed as character.
+
+		LD		C, 00Ch
+		CALL	0A00Dh		The character is shown at the cursor position. The cursor is moved one position to the right.
+
+5.) The character string (0 terminated) pointed to by the IY register is printed to the screen at the cursor position. The cursor position is updated to the end of the string.
+
+		LD		IY, <startOfString>
+		CALL	0A010h
+
+6.) The character string (0 terminated) pointed to by the IY register is printed to the screen at the cursor position. An line ending is automatically added. The cursor position is updated to the end of the string.
+
+		LD		IY, <startOfString>
+		CALL	0A013h
+
+More routines are available, but not (yet) described.
