@@ -108,3 +108,97 @@ Calls implemented in the ROM, to be used from user programs:
 		CALL	0A013h
 
 More routines are available, but not (yet) described.
+
+
+Hardware specifications
+
+* compatible with the MPF-I and MPF-IB via the 40 pin flatcable.
+
+* MC6845 CRT controller or compatible for display control, I/O registers decoded to a 16 port range. The default usage is at 0F0h- 0F1H, but 15 other rangers are easy co configure (requires firmware re-assembly).
+
+* 2 kByte video RAM, default at 0400h-04FFh, but all other 4 kByte ranges are configurable (requires firmware re-assembly).
+
+* 4 kByte firmware ROM,default at 0A000h-0AFFFh, but all other 4kByte rangers are configurable (requires firmware re-assembly).
+
+* circuit is compliant with Mode 2 interrupt usage (M1* used in selection).
+
+* The firmware supports video-blanking (striping) prevention for CRT variants that support this (UM6845, SY6545, ...).
+
+* The character ROM contains a full set of 256 characters, each 8 by 11 pixels in size. With this character height, 20 lines are supported. An alternate character size of 8 by 9 pixels supports 24 lines, while still generate a PAL-compatible video signal.
+
+
+Software specifications
+
+These are the most interesting entry addresses as of version 2.2:
+
+* 0a000h:   clear screen, reset cursor 
+
+* 0a004h:	init 6845, clear screen, return from call
+ 
+* 0a007h:	init 6845, clear screen, jump to 0000h
+
+* 0a00ah:	(JCRTCO) print character in C, interpret control codes
+
+* 0a00dh:	(JCRTOU) print character in C, print codes 00h-31h too
+
+* 0a010h:	(JTEXCO) print 00h terminated string (start in IY)
+
+* 0a013h:	(JTEXCLN) print 00h terminated string (start in IY) with line end (CR/LF)
+
+* 0a016h:	writes character set to screen, jump to 0000h
+
+* 0a019h:   init 6845, clear screen, print banner, rst 0
+
+* 0a01Fh:   hex/ascii memory dump of 8 * 16 bytes, rst 0
+
+Memory map
+
+0FFFFh  +-----------+
+        |           |
+
+        |           |
+0B000h  +-----------+
+        |           |
+        |    ROM    |  VIO- monitor routines
+        |           |
+0A000h  +-----------+
+        |           |
+
+        |           |
+05000h  +-----------+
+        |           |
+        |    RAM    |  Free to use
+        |           |
+04620h  +-----------+
+        |           |
+        |    RAM    |  VID Monitor work space
+        |           |
+04600h  +-----------+
+        |           |
+        | Video RAM |  Display memory space
+        |           |
+04000h  +-----------+
+        |           |
+
+        |           |
+03000h  +-----------+
+        |           |
+        |  RAM/ROM  |  U7 socket on MPF-I(B) 
+        |           |
+02000h  +-----------+
+        |           |
+        |    RAM    |  U8 socket on MPF-I(B) 
+        |           |
+01800h  +-----------+
+        |           |
+        |           |  Unused space
+        |           |
+01000h  +-----------+
+        |           |
+        |    ROM    |  Tiny-Basic on MPF-I(B) 
+        |           |
+00800h  +-----------+
+        |           |
+        |    ROM    |  Monitor  on MPF-I(B)
+        |           |
+00000h  +-----------+
