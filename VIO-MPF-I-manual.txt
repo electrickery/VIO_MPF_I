@@ -248,3 +248,39 @@ Video signal striping
 
     If the video signal suffers from striping or video blanking during reads and writes to video-RAM, it is caused bu CPU access during character generation. The firmware tries to prevent this, but not all MC6845 CRT variants support this. The standard MC6845P and UM8645 don't, but the UM6845R and MOS6545-1 do. In case of doubt, consult the datasheet for your chip and look for the availability of the Status register. When available, no striping should occur, at least when accessing the board with the firmware. The striping is prevented in software, so other code can still produce it when accessing video RAM.
   
+The firmware supports a limited set of Control-codes, which can be send to the card with the following code fragment:
+
+	05fe                   3      3 SCAN:   EQU   005FEh
+	a00a                   4      4 JCRTCO: EQU   0A00Ah
+                       	   5      5 
+                       	   6      6         ORG   1800h
+                       	   7      7 CRTSTE:
+	1800  dd 21 11 18      8      8         LD    IX, TEST
+	1804  cd fe 05         9      9         CALL  SCAN
+	1807  4f              10     10         LD    C, A
+	1808  fe 12           11     11         CP    12h
+	180a  28 05           12     12         JR    Z, TEST
+	180c  cd 0a a0        13     13         CALL  JCRTCO
+	180f  18 ef           14     14         JR    CRTSTE
+                      	  15     15 TEST:
+	1811  c7              16     16         RST   0h
+                      	  17     17         
+                      	  18     18         ORG   1850h
+	1850  00              19     19         DEFB  000h
+	1851  00              20     20         DEFB  000h
+	1852  87              21     21         DEFB  087h
+	1853  a6              22     22         DEFB  0A6h
+	1854  8f              23     23         DEFB  08Fh
+	1855  87              24     24         DEFB  087h
+
+	'0' key: cursor one position to the right
+	'1' key: cursor one position to the left
+	'2' key: cursor one line up
+	'3' key: cursor one line down
+	'8' key: enter backspace
+	'A' key: enter linefeed
+	'C' key: enter clear screen
+	'D' key: enter carriage return
+
+Other keys print the matching character at the cursor position.
+....
