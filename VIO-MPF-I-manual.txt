@@ -1,3 +1,5 @@
+
+
 Connecting the VID-MPF-I
 
 I)	Power supply:
@@ -239,5 +241,7 @@ Font-ROM bit mix-up.
 I/O-port selection pull-up problem.
 
     For the default I/O-selection of 0F0h-0FFh (all of AD4-AD7 high) a single pull-up resistor is fine, but for other ranges, a pull-up resister per address line is needed. This requires cutting traces between the jumpers, but not between the jumpers and the U2 (74LS85) inputs. Then a resistor per jumper/address line should be added. There is not yet a complete description for this.
+    
+    This operation could be combined with a change to include AD1 to AD3 to the port addressing. This would reduce the port range from sixteen to just two, which could be useful for systems with limited free I/O-ports. 
     
   
