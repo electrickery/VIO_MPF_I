@@ -202,3 +202,42 @@ Memory map
         |    ROM    |  Monitor  on MPF-I(B)
         |           |
 00000h  +-----------+
+
+
+Theory of operation
+
+In the bottom left corner of the schematic is the character generator EPROM U11. The eleven address lines of the 2716 EPROM are split into four for the character height and seven for the number of characters. This means characters can be 16 lines high and there can be 128 of them. The eight data lines limit the character width. In practice the character is eleven lines high. The character line data is latched by U4, a 74LS273. This latch is clocked by the character clock ZTKT*. This clock is derived from the oscillator X1 and counter U10. This divider defines the character width. Dividing by seven or six would result in narrower characters, but more would fit on a line. The ZTKT* clock is also fed to U8, the CRT-controller and the basis for all timings of the CRT.
+
+Bottom right is the ROM U19, selectable as 2 kByte and 4 kByte EPROM. The default location in the accress map is 0A000h-0AFFFh. Left of this U15 the bi-directional buffer which regulates CPU access to the video RAM and the character generator chain. The Video RAM, U12, gets its addressing from the three  2-line multiplexers (U16, U17 and U18). These select either the CRT generating address lines (HSBL* low), or the CPU address lines (HSBL* high).
+
+U8, the CRT-controller generates character-line addressing with the MA0-MA13 lines. For this board only MA0-MA10 are used, enough for the 2 kByte video RAM. The RA0-RA4 lines generate the character-lines, of which only RA0-RA3 are used. Some other video relates signals are also generated, like HSYNC, VSYNC, DEN and CU. DEN blanks the video outside the character area, CU superimposes the cursor on the signal. 
+
+The bi-directional buffer U14 switches the data direction to and from the CRT and is superfluous. It was there on the original board and faitfully copied. But just eight wires would work just as well.
+
+Below this the address and I/O selection. The CRT I/O addresses are preset to 0F0h-0FFh, but with trace-cutting and using the jumpers J5-J8, any 16 port range could be selected. The single resistor R7 is than not enough, each jumper should have its own resistor. The bit pattern created with J5-J8 is compared with address lines AD4-AD7 in U2, an 74LS85. On them being equal is the CRT chip select signal. An inverted (U5D) IORQ* is applied to the 74LS85 Ia=b line to limit the selection to I/O-ports.
+The U5C NAND-as-inverter can be changed to true NAND by feeding M1* to one of the pins. This would make the circuit compatible with interrupt request acknowledge usage, typically for the Z80 interrupt mode 2. 
+
+Errata for the 2.0 remake board:
+
+The first remake is marked 2.0. During component assembly and testing some problems were found. These problems were:
+
+Use the MI* signal in I/O-port selection.
+
+    This can give problems during an interrupt acknowledge. Remove the trace between U5-9 and U5-10 (component side, alas) and connect U5-10 to J1-27.
+    
+Address selection mix-up.
+
+    The ROM is at 4000h and RAM at A000h. Cut the traces between the J9 pins and he J10 pins. Connect J9-1 with J10-2 and J9-2 and J10-1. Selecting other outputs of U3 and U20 make it possible to change the address mapping of ROM and video-RAM.
+    
+Font-ROM bit mix-up.
+
+    During transcribing the original schema to KiCAD, the order of the bits between the Font-ROM and the latch went wrong, mangling the characters.
+    
+    Cut traces to U11-13, U11-14, U11-16, and U11-17.
+    Connect U11-13 to U4-7, U11-14 to U4-14, U11-16 to U4-13 and U11-17 to U4-8. 
+
+I/O-port selection pull-up problem.
+
+    For the default I/O-selection of 0F0h-0FFh (all of AD4-AD7 high) a single pull-up resistor is fine, but for other ranges, a pull-up resister per address line is needed. This requires cutting traces between the jumpers, but not between the jumpers and the U2 (74LS85) inputs. Then a resistor per jumper/address line should be added. There is not yet a complete description for this.
+    
+  
