@@ -212,7 +212,7 @@ In the bottom left corner of the schematic is the character generator EPROM U11.
 
 Bottom right is the ROM U19, selectable as 2 kByte and 4 kByte EPROM. The default location in the accress map is 0A000h-0AFFFh. Left of this U15 the bi-directional buffer which regulates CPU access to the video RAM and the character generator chain. The Video RAM, U12, gets its addressing from the three  2-line multiplexers (U16, U17 and U18). These select either the CRT generating address lines (HSBL* low), or the CPU address lines (HSBL* high).
 
-U8, the CRT-controller generates character-line addressing with the MA0-MA13 lines. For this board only MA0-MA10 are used, enough for the 2 kByte video RAM. The RA0-RA4 lines generate the character-lines, of which only RA0-RA3 are used. Some other video relates signals are also generated, like HSYNC, VSYNC, DEN and CU. DEN blanks the video outside the character area, CU superimposes the cursor on the signal. 
+U8, the CRT-controller generates character-line addressing with the MA0-MA13 lines. For this board only MA0-MA10 are used, enough for the 2 kByte video RAM. The RA0-RA4 lines generate the character-lines, of which only RA0-RA3 are used. Some other video relates signals are also generated, like HSYNC, VSYNC, DEN and CU. DEN (display ENable) blanks the video outside the character area, CU (CUrsor) superimposes the cursor on the signal. 
 
 The bi-directional buffer U14 switches the data direction to and from the CRT and is superfluous. It was there on the original board and faitfully copied. But just eight wires would work just as well.
 
@@ -244,4 +244,7 @@ I/O-port selection pull-up problem.
     
     This operation could be combined with a change to include AD1 to AD3 to the port addressing. This would reduce the port range from sixteen to just two, which could be useful for systems with limited free I/O-ports. 
     
+Video signal striping
+
+    If the video signal suffers from striping or video blanking during reads and writes to video-RAM, it is caused bu CPU access during character generation. The firmware tries to prevent this, but not all MC6845 CRT variants support this. The standard MC6845P and UM8645 don't, but the UM6845R and MOS6545-1 do. In case of doubt, consult the datasheet for your chip and look for the availability of the Status register. When available, no striping should occur, at least when accessing the board with the firmware. The striping is prevented in software, so other code can still produce it when accessing video RAM.
   
