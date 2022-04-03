@@ -48,4 +48,6 @@ Screenshot of the first page of the Monitor ROM:
 Schema of the original Bardhele VIDEO-MPF-I:
 ![Schema VIDEO-MPF-I v1.2](./VIO_MPF_schema_v1.2.pdf)
 
+The 8x9 FONT ROM works ok with the 40x25 mode:
+![40x25 mode with 8x9 font](./charSet8x9AT40x25.jpg)
 

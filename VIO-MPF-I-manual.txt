@@ -247,6 +247,9 @@ I/O-port selection pull-up problem.
 Video signal striping
 
     If the video signal suffers from striping or video blanking during reads and writes to video-RAM, it is caused bu CPU access during character generation. The firmware tries to prevent this, but not all MC6845 CRT variants support this. The standard MC6845P and UM8645 don't, but the UM6845R and MOS6545-1 do. In case of doubt, consult the datasheet for your chip and look for the availability of the Status register. When available, no striping should occur, at least when accessing the board with the firmware. The striping is prevented in software, so other code can still produce it when accessing video RAM.
+ 
+ 
+Test program control codes
   
 The firmware supports a limited set of Control-codes, which can be send to the card with the following code fragment:
 
@@ -284,3 +287,46 @@ The firmware supports a limited set of Control-codes, which can be send to the c
 
 Other keys print the matching character at the cursor position.
 ....
+
+
+Custom CRT register settings
+
+The 6845 register table can be moved to RAM and modified, to experiment with display layout. With the 8x8 font ROM, the display can even show 25 rows with 40 characters.
+
+1 - Copy the register table from 0a385h - 0a3a5h to RAM
+2 - Modify the table.
+3 - Set HL to the target address and jump to a019h to activale the custom set.
+
+1  [MOVE] A 3 8 5 + A 3 A 5 + 1 9 0 0	; this copies the table to RAM at 01900h.
+2 - The table consists of alternate register numbers and values and is terminated by 0ffh. An online MC6845 CRT calculator can be found at https://mrboot.de/mc6845.php
+3 - A short program. The start address of the register table is at line 4, in reverse order; LSB-MSB:
+
+                      	   1      1 ; Custom register set values
+                      	   2      2 	org	01800h
+                      	   3      3 	
+	1800  21 00 19         4      4 	ld		hl, 01900h
+	1803  cd 19 a0         5      5 	call	0a019h
+	1806  c7               6      6 	rst		0
+	1807                   7      7 	end
+
+The table with original and modified values:
+REGTAB: ; for 40x20 @8x11 with new values for 40x25 @8x9 at the right:
+	defb	00h, 03fh	; R0  Horizontal Total
+	defb	01h, 028h	; R1  Horizontal Displayed
+	defb	02h, 030h	; R2  Horizontal Sync Position
+	defb	03h, 005h	; R3  Horizontal Sync Width
+	defb	04h, 019h	; R4  Vertical Total			; 25 + 5 = 30 > 01eh
+	defb	05h, 001h	; R5  Vertical Total Adjust
+	defb	06h, 014h	; R6  Vertical Displayed		; 20 + 5 = 25 > 019h
+	defb	07h, 016h	; R7  Vertical Sync position	; change to 01eh
+	defb	08h, 000h	; R8  Interlace and Skew
+	defb	09h, 00bh	; R9  Maximum Raster Address	; change to 009h
+	defb	0ah, 060h	; R10 Cursor Start Raster
+	defb	0bh, 00bh	; R11 Cursor End Raster
+	defb	0ch, 000h	; R12 Display Start Address (High)
+	defb	0dh, 000h	; R13 Display Start Address (Low)
+	defb	0eh, 000h	; R14 Cursor Address (High)
+	defb	0fh, 000h	; R15 Cursor Address (Low) 
+	defb	PARTERM		; table terminator
+
+The firmware still thinks there are 20 lines, so normal printing will not use the extra lines. 
