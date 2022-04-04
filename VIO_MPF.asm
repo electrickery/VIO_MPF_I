@@ -1,6 +1,6 @@
 ; VIOMON 2.2 - based on disassembled Bardhele ROM
 
-VERSION:EQU    '2.2'
+VERSION:EQU    '2.3'
 
 ;6545 CRT status register (same address as address register):
 ;
@@ -18,7 +18,7 @@ CRTD:	EQU		0f1h
 
 ; screen gometry
 COLS:	EQU		028h ; 40 char per line
-CHROWS:	EQU		014h ; 20 lines
+CHROWS:	EQU		018h ; 20 lines
 
 ; Video RAM
 SCREEN:	EQU		04000h
@@ -73,7 +73,7 @@ BYTESLIN:EQU    08h  ; bytes dumped per line
 
 DMPLINES:EQU    10h  ; lines per dump page
 
-ROM:    EQU     0A000h
+ROM:    EQU     02000h
 
         ORG     ROM
 
@@ -144,7 +144,7 @@ BRBEND:
 la16ah:     ;	writes character set to screen
 	ld      hl, VIDMEMP		;a16a	21 0a 46 	! . F 
 	call    sub_a44dh		;a16d	cd 4d a4 	. M . 
-	ld      b, 028h		;a170	06 28 	. ( 
+	ld      b, COLS		;a170	06 28 	. ( 
 la172h:
 	ld      (hl), ' '		;a172	36 20 	6   
 	inc     hl			;a174	23 	# 
@@ -409,7 +409,7 @@ sub_a2f0h:
 	call sub_a460h		;a2f0	cd 60 a4 	. ` . 
 	ld a,e			;a2f3	7b 	{ 
 	inc a			;a2f4	3c 	< 
-	cp 028h			;a2f5	fe 28 	. ( 
+	cp COLS			;a2f5	fe 28 	. ( 
 	jr z,la2ech		;a2f7	28 f3 	( . 
 la2f9h:
 	ld e,a			;a2f9	5f 	_ 
@@ -437,7 +437,7 @@ sub_a317h:
 	call sub_a460h		;a317	cd 60 a4 	. ` . 
 	ld a,d			;a31a	7a 	z 
 	inc a			;a31b	3c 	< 
-	cp 014h			;a31c	fe 14 	. . 
+	cp CHROWS			;a31c	fe 14 	. . 
 	jr z,la2ech		;a31e	28 cc 	( . 
 	jr la312h		;a320	18 f0 	. . 
     
@@ -452,14 +452,14 @@ sub_a329h:
 	jr la325h		;a32c	18 f7 	. . 
 	
 sub_a32eh:
-	ld hl,00100h		;a32e	21 00 01 	! . . 
+	ld hl, 00100h		;a32e	21 00 01 	! . . 
 	call 0086eh		;a331	cd 6e 08 	. n . 
 	ret				;a334	c9 	. 
 	
 sub_a335h:
 	call sub_a322h		;a335	cd 22 a3 	. " . 
-	ld b,013h		;a338	06 13 	. . 
-	ld de,SCREEN		;a33a	11 00 40 	. . @ 
+	ld b, CHROWS		;a338	06 13 	. . 
+	ld de, SCREEN		;a33a	11 00 40 	. . @ 
 	ld hl,04028h		;a33d	21 28 40 	! ( @ 
 la340h:
 	push bc			;a340	c5 	. 
@@ -470,7 +470,7 @@ la341h:
 	in a,(CRTA)		;a346	db f0 	. . 
 	rlca			;a348	07 	. 
 	jr nc,la341h		;a349	30 f6 	0 . ; again1
-	ld b,028h		;a34b	06 28 	. ( 
+	ld b,COLS		;a34b	06 28 	. ( 
 la34dh:
 	ld a,(hl)			;a34d	7e 	~ 
 	cp (hl)			;a34e	be 	. 
@@ -564,7 +564,7 @@ la3bch:
 	push hl			;a3c2	e5 	. 
 	pop de			;a3c3	d1 	. 
 	inc de			;a3c4	13 	. 
-	ld bc,00027h		;a3c5	01 27 00 	. ' . 
+	ld bc,CHROWS-1		;a3c5	01 27 00 	. ' . 
 	call sub_a3f8h		;a3c8	cd f8 a3 	. . . 
 	ret				;a3cb	c9 	. 
 	
@@ -750,15 +750,15 @@ la49dh:
 	defb	01h, 028h	; R1  Horizontal Displayed
 	defb	02h, 030h	; R2  Horizontal Sync Position
 	defb	03h, 005h	; R3  Horizontal Sync Width
-	defb	04h, 019h	; R4  Vertical Total
+	defb	04h, 01eh	; R4  Vertical Total		 ; 019h for 20 rows, 8x11 font
 la4a7h:
 	defb	05h, 001h	; R5  Vertical Total Adjust
-	defb	06h, 014h	; R6  Vertical Displayed
-	defb	07h, 016h	; R7  Vertical Sync position
+	defb	06h, 019h	; R6  Vertical Displayed	 ; 014h for 20 rows, 8x11 font
+	defb	07h, 01ah	; R7  Vertical Sync position ; 016h for 20 rows, 8x11 font
 	defb	08h, 000h	; R8  Interlace and Skew
-	defb	09h, 00bh	; R9  Maximum Raster Address
+	defb	09h, 009h	; R9  Maximum Raster Address ; 00bh for 20 rows, 8x11 font
 	defb	0ah, 060h	; R10 Cursor Start Raster
-	defb	0bh, 00bh	; R11 Cursor End Raster
+	defb	0bh, 009h	; R11 Cursor End Raster
 CURRST:
 	defb	0ch, 000h	; R12 Display Start Address (High)
 	defb	0dh, 000h	; R13 Display Start Address (Low)
@@ -845,7 +845,7 @@ SPASH:
 ;8
     call    SETBOR
     ld      hl, MODIN2
-    ld      de, LINEBUF + 2
+    ld      de, LINEBUF + 1
     ld      bc, MODIN3 - MODIN2
     ldir
     ld      iy, LINEBUF
@@ -882,9 +882,17 @@ SPASH:
     call    JTEXCO
     ld      iy, HASHBR      ; borders of #' s
     call    JTEXCO
+    ld      iy, HASHBR      ; borders of #' s
+    call    JTEXCO
+    ld      iy, HASHBR      ; borders of #' s
+    call    JTEXCO
+    ld      iy, HASHBR      ; borders of #' s
+    call    JTEXCO
+    ld      iy, HASHBR      ; borders of #' s
+    call    JTEXCO
 
    
-;20
+;24
     ld      iy, HASHLN      ; line with all #' s
     call    JTEXCO
 
@@ -893,15 +901,13 @@ SPASH:
 
 MODINF:
     defm 'VIOMON '
-    defm 'v 2.2'
+    defm 'v 2.3'
 MODIN2:
     defm 'http://www.electrickeryl.nl/comp/mpf1'
 MODIN3:
-    defm '2022-02-07'
+    defm '2022-04-04'
 MODIEND:
 	defb	00h
-	rst 38h			;a4d0	ff 	. 
-	rst 38h			;a4d1	ff 	. 
   
   
 MEMDUMP:
