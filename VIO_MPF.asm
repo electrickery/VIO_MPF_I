@@ -16,9 +16,15 @@ VERSION:EQU    '2.3'
 CRTA:	EQU		0f0h
 CRTD:	EQU		0f1h
 
-; screen gometry
+; screen geometry
 COLS:	EQU		028h ; 40 char per line
 CHROWS:	EQU		018h ; 20 lines
+
+; 6845 register indexes
+R12DSAH:EQU		0ch	; R12 Display Start Address (High)
+R13DSAL:EQU		0dh ; R13 Display Start Address (Low)
+R14CAH:	EQU		0eh	; R14 Cursor Address (High)
+R15CAL:	EQU		0fh	; R15 Cursor Address (Low) 
 
 ; Video RAM
 SCREEN:	EQU		04000h
@@ -45,8 +51,10 @@ d460ch:	EQU		0460ch	; 460ch & 460dh - sub_a08ah, sub_a0b3h, la19eh (WSINIT)
 
 PBAFLG: EQU     0460Eh  ; Print only ASCII flag. 
 
-DUMPADR:EQU     0461Ah  ; start address for the next memory dump
-LINCNT: EQU     0461Eh  ; counter for lines dumped
+DUMPADR:EQU     04610h  ; start address for the next memory dump
+LINCNT: EQU     04612h  ; counter for lines dumped
+
+REGTABR:	EQU		04614h  ; to 04634h
 
 ; Control codes
 CRIGHT:	EQU		00h
@@ -63,7 +71,7 @@ PARTERM:EQU     0FFh
 
 ALFVAL:	EQU		0A5h	; auto LF value
 
-; line buffer data
+; line buffer data for memory dump hex/ascii
 LINEBUF:EQU     04640h ; address of line buffer
 ADDRPOS:EQU     00h  ; address section on line, relative to LINEBUF
 HEXPOS: EQU     06h  ; hex section on line, relative to LINEBUF
@@ -100,22 +108,27 @@ sub_a00dh:			;	(JCRTOU) print character in C, print codes 00h-31h too
 JTEXCO:				;	(JTEXCO) print 00h terminated string (start in IY).
 	jp la433h		;a010
 	
-JTEXCLN:			;	(JTEXCNL) print 00h terminated string (start in IY). Add line end: CR LF
+JTEXCLN:			;	(JTEXCNL) print 00h terminated string (start in IY). Adds line end: CR LF
 	jp la441h		;a013
 	
 JVIDTE: 			;	writes character set to screen
 	jp CHRSET		;a016 
     
 REGINIT:
-sub_a019h:			;	configure 6845 with register/data table in HL (FFh terminated)
+sub_a019h:			;	configure 6845 with register/data table at REGTABR (FFh terminated)
 	jp SETREG		;a019
 
 SPLASH_:    
     jp SPASH        ;a01c
 
 MEMDMP_:
-    jp  MEMDUMP
+    jp  MEMDUMP		;a01f
     
+SETCURS_:
+	jp SETCURS		; Set cursor position
+	
+DMPREGS_:
+	jp	DMPREGS		; Dump readable CRT registers
 
 CRLF:
 la106h:
@@ -174,9 +187,9 @@ la197h:
 WSINIT:     ; init 6845, clear screen, return from call
 la19eh:
 	ld de, SCREEN		;a19e	11 04 ff 	. . . 
-	ld bc,0ff2bh		;a1a1	01 2b ff 	. + . 
+;	ld bc,0ff2bh		;a1a1	01 2b ff 	. + . 
 	ld (VIDMEMP), de		;a1a4	ed 53 0a 46 	. S . F 
-	ld (0460ch), bc		;a1a8	ed 43 0c 46 	. C . F 
+;	ld (0460ch), bc		;a1a8	ed 43 0c 46 	. C . F 
 	ld hl, REGTAB		;a1ac	21 9d a4 	! . . 
 	call REGINIT		;a1af	cd 19 a0 	. . .   config 6845
 	ld c,00ch		;a1b2	0e 0c 	. . 
@@ -204,6 +217,7 @@ la1c6h:
 	ld c, CRTA		;a1c6	0e f0 	. . 
 NEXTREG:
 la1c8h:
+;	ld		hl, REGTAB	; point to register table in RAM
 	ld a,(hl)			;a1c8	7e 	~ 
 	cp PARTERM			;a1c9	fe ff 	. . 
 	ret z			;a1cb	c8 	. 	; Done NEXTREG
@@ -215,29 +229,6 @@ la1c8h:
 	dec c			;a1d3	0d 	. 	; point to CRTA
 	inc hl			;a1d4	23 	# 
 	jr NEXTREG		;a1d5	18 f1 	. . 
-	
-CHRSET:
-la1d7h:             ;	writes character set to screen
-	ld c, FF		;a1d7	0e 0c 	. . insert Form feed
-	call JCRTCO		;a1d9	cd 0a a0 	. . . 
-	ld c,000h		;a1dc	0e 00 	. . 
-CHRS1:             ; iterate from 00h to 07Fh
-	call JCRTOU		;a1de	cd 0d a0 	. . . 
-	inc c			;a1e1	0c 	. 
-	ld a,c			;a1e2	79 	y 
-	cp 080h			;a1e3	fe 80 	. . 
-	jr nz, CHRS1		;a1e5	20 f7 	  next char (< 80h). 
-    
-	ld c, CR		;a1e7	0e 0d 	. . ;insert CR & LF
-	call JCRTCO		;a1e9	cd 0a a0 	. . . 
-	ld c, LF		;a1ec	0e 0a 	. . 
-	call JCRTCO		;a1ee	cd 0a a0 	. . . 
-	ld c,080h		;a1f1	0e 80 	. . 
-CHRS2:             ; iterate from 80h to FFh
-	call JCRTOU		;a1f3	cd 0d a0 	. . . 
-	inc c			;a1f6	0c 	. 
-	jr nz, CHRS2		;a1f7	20 fa 	  . next char. 
-	jp 00000h		;a1f9	c3 00 00 	. . . Back to monitor
 	
 la1fch:     ;	(JCRTCO) print character in C, interpret control codes
 	push iy			;a1fc	fd e5 	. . 
@@ -765,6 +756,7 @@ CURRST:
 	defb	0eh, 000h	; R14 Cursor Address (High)
 	defb	0fh, 000h	; R15 Cursor Address (Low) 
 	defb	PARTERM		; table terminator
+RTEND:
 
 CURSOF:
 la4beh:
@@ -777,130 +769,10 @@ la4c1h:
     defb    PARTERM
     
    
-HASHLN:
-    defm    '########################################'
-    defb    00h
-HASHBR:
-    defm    '#                                      #'
-    defb    00h
-
-CLNBUF:
-    ld      hl, LINEBUF
-    ld      de, LINEBUF + 1
-    ld      bc, COLS
-    ld      (hl), ' '
-    ldir
-    ret
-    
-SETBOR:
-    ld      hl, HASHBR
-    ld      de, LINEBUF
-    ld      bc, COLS + 1    ; include the 00h
-    ldir
-    ret
-    
-SPASH:
-;1
-    call    CINIT
-    ld      iy, HASHLN      ; line with all #' s
-    call    JTEXCO
-;2
-    ld      iy, HASHBR      ; borders of #' s
-    call    JTEXCO
-;3
-    call    SETBOR          ; load borders to LINEBUF
-    ld      hl, BRBAN1
-    ld      de, LINEBUF + 3
-    ld      bc, BRBAN2 - BRBAN1
-    ldir
-    ld      iy, LINEBUF
-    call    JTEXCO
-;4
-    call    SETBOR
-    ld      hl, BRBAN2
-    ld      de, LINEBUF + 3
-    ld      bc, BRBAN3 - BRBAN2
-    ldir
-    ld      iy, LINEBUF
-    call    JTEXCO
-;5
-    call    SETBOR
-    ld      hl, BRBAN3
-    ld      de, LINEBUF + 3
-    ld      bc, BRBEND - BRBAN3
-    ldir
-    ld      iy, LINEBUF
-    call    JTEXCO
-;6
-    call    SETBOR
-    ld      iy, LINEBUF
-    call    JTEXCO
-;7
-    ld      hl, MODINF
-    ld      de, LINEBUF + 3
-    ld      bc, MODIN2 - MODINF
-    ldir
-    ld      iy, LINEBUF
-    call    JTEXCO
-;8
-    call    SETBOR
-    ld      hl, MODIN2
-    ld      de, LINEBUF + 1
-    ld      bc, MODIN3 - MODIN2
-    ldir
-    ld      iy, LINEBUF
-    call    JTEXCO
-;9
-    call    SETBOR
-    ld      hl, MODIN3
-    ld      de, LINEBUF + 3
-    ld      bc, MODIEND - MODIN3
-    ldir
-    ld      iy, LINEBUF
-    call    JTEXCO
-;10
-
-;    ld      d, 9
-;BRLOOP:
-    ld      iy, HASHBR      ; borders of #' s
-    call    JTEXCO
-;    dec     d
-;    jr      z, BRLOOP
-    ld      iy, HASHBR      ; borders of #' s
-    call    JTEXCO
-    ld      iy, HASHBR      ; borders of #' s
-    call    JTEXCO
-    ld      iy, HASHBR      ; borders of #' s
-    call    JTEXCO
-    ld      iy, HASHBR      ; borders of #' s
-    call    JTEXCO
-    ld      iy, HASHBR      ; borders of #' s
-    call    JTEXCO
-    ld      iy, HASHBR      ; borders of #' s
-    call    JTEXCO
-    ld      iy, HASHBR      ; borders of #' s
-    call    JTEXCO
-    ld      iy, HASHBR      ; borders of #' s
-    call    JTEXCO
-    ld      iy, HASHBR      ; borders of #' s
-    call    JTEXCO
-    ld      iy, HASHBR      ; borders of #' s
-    call    JTEXCO
-    ld      iy, HASHBR      ; borders of #' s
-    call    JTEXCO
-    ld      iy, HASHBR      ; borders of #' s
-    call    JTEXCO
-
-   
-;24
-    ld      iy, HASHLN      ; line with all #' s
-    call    JTEXCO
-
-    rst     0
-
 
 MODINF:
     defm 'VIOMON '
+MODIN1:
     defm 'v 2.3'
 MODIN2:
     defm 'http://www.electrickeryl.nl/comp/mpf1'
@@ -908,204 +780,97 @@ MODIN3:
     defm '2022-04-04'
 MODIEND:
 	defb	00h
-  
-  
-MEMDUMP:
-        CALL    CRLF        ; start at a new line
-        LD      A, DMPLINES
-        LD      (LINCNT), A
-            
-MDNXT:            
-        CALL    CLNBUF
-        LD      BC, (DUMPADR)
-        CALL    NXTLIN      ; 
-        LD      A, BYTESLIN
-        CALL    ADDSOME
-        LD      (DUMPADR), BC
-            
-        LD      A, (LINCNT)
-        DEC     A
-        JR      Z, DONEDMP
-        LD      (LINCNT), A
-        JR      MDNXT
-            
-DONEDMP:
-        RST     0
-            
-ADDSOME:
-; Add A to BC
-        PUSH    HL
-        LD      L, A
-        LD      A, C
-        ADD     A, L
-        LD      C, A
-        JR      NC, MDNBI
-        INC     B
-MDNBI:
-        POP     HL
-        RET
+	
 
-NXTLIN:
+; ************ Set cursor routine ************
+		;	 B contains row, C contains column position	
+SETCURS:
+		LD		(COLPOS), BC ; C > COLPOS, B > ROWPOS
+		; Get current display start address from Display Start Address Registers in HL
+		LD		C, R12DSAH
+		CALL	GETREG
+		LD		H, C
+		LD		C, R13DSAL
+		CALL	GETREG
+		LD		L, C
+		; Add C and B * COLS
+		LD		BC, COLPOS
+		LD		DE, COLS
+		LD		A, L
+		ADD		A, C
+		LD		L, A
+		JR		NC, SCNC
+		INC		H
+SCNC:
+		CALL	MULT
+		AND		A		; to clear carry flag
+		ADC		HL, DE
+		; Put new cursor position in 6845 Cursor Address Registers
+		LD		A, R14CAH
+		LD		C, H
+		CALL	PUTREG
+		LD		A, R15CAL
+		LD		C, L
+		CALL	PUTREG
+		
+		RST		0
 
-; Write address to line buffer
-; init: BC contains the address
-;       IX contains the start address for the dump
-; exit:
-; destroys: AF, IX
-;
-        PUSH    BC
-        PUSH    DE
-        PUSH    HL
-        PUSH    IX
-        PUSH    IY
-        LD      IX, LINEBUF
-        LD      A, B
-        CALL    BYTE2HEX
-        LD      (IX+0), D
-        INC     IX
-        LD      (IX+0), E
-        INC     IX
-        LD      A, C
-        CALL    BYTE2HEX
-        LD      (IX+0), D
-        INC     IX
-        LD      A, E
-        LD      (IX+0), E
-        
-; Write values to line buffer
-; init: IX points to target HEX location MSN
-;       IY points to target ASCII location 
-;       BC points to source location
-;       HL contains the memory bytes to dump per line (H assumed 0)
-; exit:
-; destroys: DE, HL
-;
-; 
-        LD      L, BYTESLIN
-        LD      IX, LINEBUF
-        LD      IY, LINEBUF
-        
-NXTVAL1:
-        LD      A, (BC)
-        CALL    BYTE2HEX
-        LD      (IX+HEXPOS), D
-        INC     IX
-        LD      (IX+HEXPOS), E
-        INC     IX
-        INC     IX              ; add space between hex values
-;        LD      A, L
-;        CP      5
-;        JR      NZ, NVNOSP
-;        INC     IX              ; extra space between groups of four
-;NVNOSP:
-        LD      A, (BC)         ; reload the value for ASCII dump
-        CALL    PRTBL
-        LD      (IY+ASCPOS), A
-        INC     IY
-        INC     BC
-        DEC     L
-        LD      A, L
-        CP      0h
-        JR      NZ, NXTVAL1
+; Register index in A. Destroys A, C. Returns value in A.
+GETREG:
+		LD		C, CRTA
+		OUT		(C), A
+		LD		C, CRTD
+		IN		A, (C)
+		RET
 
-DONEVAL:
+; Register index in A, value in E. 
+PUTREG:
+		LD		C, CRTA
+		OUT		(C), A
+		LD		C, CRTD
+		OUT		(C), E
+		RET
+		
+; Chars per row in C, current row in B. Returns product in DE.
+MULT:
+		PUSH	HL
+		LD		HL, 0
+M1:
+		XOR		A
+		ADD		A, B
+		JR		Z, MDONE
+		LD		A, L
+		ADD		A, C
+		JR		NC, MLOK
+		INC		H
+MLOK:
+		LD		L, A
+		DEC		B
+		JR		M1
+MDONE:
+		PUSH 	HL	; copy HL
+		POP		DE	; to DE
+		
+		POP		HL
+		RET
 
-; Add line terminator
-        LD      HL, LINEBUF + COLS -1
-        LD      A, 0
-        LD      (HL), A
-
-; Call printLine
-        LD      IY, LINEBUF
-        CALL    JTEXCLN
-
-        POP    IY
-        POP    IX
-        POP    HL
-        POP    DE
-        POP    BC
-        
-        RET     ; NXTLN
-
-; BYTE2HEX - Converts a byte to two ASCII hexadecimal bytes
-; init: A  - contains the byte
-; exit: DE - contain the hex values
-; destroys: AF
-BYTE2HEX:
-        PUSH    AF
-        AND     0F0h
-        RRCA
-        RRCA
-        RRCA
-        RRCA
-
-        CALL    NIB2HEX
-        LD      D, A
-        POP     AF
-        AND     0Fh
-        CALL    NIB2HEX      
-        LD      E, A
-        RET
  
-; NIB2HEX - converts a nibble to an ASCII hexadecimal char
-; init: A  - contains the nibble
-; exit: A  - contains the hex char
-NIB2HEX:
-        ADD     A, '0'
-        CP      ':'
-        JR      C, N2H1
-        ADD     A, 7
-N2H1:
-        RET
+		include 	apps.asm
+  
+		ld		bc, 0
+		call	SETCURS
+		
+		ld		c, '*'
+		call	JCRTCO
 
-; PRTBL - make character printable; replace < 32 and > 127 by '.'
-; init: A  - character to filter
-; exit: A  - optionally filtered character
-PRTBL:
-        PUSH    BC
-        LD      C, A
-        LD      A, (PBAFLG)
-        CP      0
-        LD      A, C
-        POP     BC
-        JR      Z, PBPASS   ; pass all char
-        CP      ' '
-        JR      C, PRDOT    ; before ' ', 20h
-        CP      '~'
-        JR      NC, PRDOT   ; after '~', 7Eh
-        RET                 ; between 1Fh and 7Fh
-PRDOT: 
-        LD      A, '.'
-        RET
-PBPASS:
-        RET
- 
-CLNLNBF:        ; clean line buffer
-        PUSH    AF
-        PUSH    BC
-        PUSH    DE
-        PUSH    HL
-        LD      A, ' '
-        LD      (LINEBUF), A
-        LD      HL, LINEBUF
-        LD      DE, LINEBUF
-        INC     DE
-        LD      BC, COLS
-        LDIR
-        POP     HL
-        POP     DE
-        POP     BC
-        POP     AF
-        RET
-
-JCLS:
-        LD      A, ' '
-        LD      (SCREEN), A
-        LD      HL, SCREEN
-        LD      DE, SCREEN
-        INC     DE
-        LD      BC, SCRNSIZ
-        LDIR
-        LD      HL, CURRST
-        RET
-;        RST     0
+        rst		0
+        
+; Chars per row in C, current row in B.        
+        ld		b, 1
+        ld		c, 014h
+        call	MULT
+        ld		(1900h), de
+        
+        halt
+        
+		end
