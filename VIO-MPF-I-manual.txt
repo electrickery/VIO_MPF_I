@@ -5,7 +5,7 @@ Connecting the VID-MPF-I
 I)	Power supply:
 	The VID-MPF-I has the same barrel type power connector as the MPF-I and the same polarity.
 	- Voltage	7.5 - 9V
-	- Ampere	??? A
+	- Ampere	250 mA
 	- Polarity	Center is positive
 	The board accepts a 7805, and has some room for a heat sink, but a switching module is usually smaller and produces less heat than the linear 7805. It allows for higher input voltages without overheating.
 
