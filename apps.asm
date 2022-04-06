@@ -193,17 +193,6 @@ CLNLNBF:        ; clean line buffer
         POP     AF
         RET
 
-JCLS:
-        LD      A, ' '
-        LD      (SCREEN), A
-        LD      HL, SCREEN
-        LD      DE, SCREEN
-        INC     DE
-        LD      BC, SCRNSIZ
-        LDIR
-        LD      HL, CURRST
-        RET
-;        RST     0
 
 ; ************ SPLASH ************
 		; outlines the display, displays copyrights
@@ -360,7 +349,8 @@ REGTXTTBL:
 	
 FSTVISR:	EQU	00Ch
 
-DMPREGS:
+DMPREGS:		; It would be better to get all registers first and then 
+				; dump them, as video-writes will change cursor address.
 	CALL    CRLF
 	LD		B, FSTVISR
 DRNXT:

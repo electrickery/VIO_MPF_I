@@ -138,6 +138,23 @@ la106h:
 	call    JCRTCO		;a10d	cd 0a a0 	. . . 
 	ret			;a110	c9 	. 
 	
+JCLS:
+	in a,(CRTA)		;a265	db f0 	. .     ; status register; 6545 feature
+	rlca			;a267	07 	. 
+	jr nc,JCLS		;a268	30 fb 	0 . ; wait for ?
+
+	LD      A, ' '
+	LD      (SCREEN), A
+	LD      HL, SCREEN
+	LD      DE, SCREEN
+	INC     DE
+	LD      BC, SCRNSIZ
+	LDIR
+	LD      HL, CURRST
+	CALL	SETREG
+	RET
+;        RST     0
+	
 la121h:
 	dec hl			;a121	2b 	+ 
 	ld bc,00c5dh		;a122	01 5d 0c 	. ] . 	; debug?
@@ -154,42 +171,42 @@ BRBAN3:
 	defm '06 85'
 BRBEND:
 ;    defb 00h
-la16ah:     ;	writes character set to screen
+
+la16ah:     ;	clear current line: writes COLS spaces to video RAM, write line end
 	ld      hl, VIDMEMP		;a16a	21 0a 46 	! . F 
-	call    sub_a44dh		;a16d	cd 4d a4 	. M . 
+	call    RDVIDMEM		;a16d	cd 4d a4 	. M . 
 	ld      b, COLS		;a170	06 28 	. ( 
 la172h:
 	ld      (hl), ' '		;a172	36 20 	6   
 	inc     hl			;a174	23 	# 
 	djnz    la172h		;a175	10 fb 	. . 
-	call    la106h		;a177	cd 06 a1 	. . . 
+	call    CRLF		;a177	cd 06 a1 	. . . 
 	ld      hl, VIDMEMP		;a17a	21 0a 46 	! . F 
-	call    sub_a44dh		;a17d	cd 4d a4 	. M . 
+	call    RDVIDMEM		;a17d	cd 4d a4 	. M . 
 	call    sub_a188h		;a183	cd 88 a1 	. . . 
 	RST		0 
 	
 sub_a188h:
-	ld hl,00c5dh		;a188	21 5d 0c 	! ] . 
+	ld hl, 00c5dh		;a188	21 5d 0c 	! ] . ; somewhere in Tiny BASIC ROM (or old VIDROM?)
 la18bh:
 	ld c,(hl)			;a18b	4e 	N 
 	ld a,c			;a18c	79 	y 
 	cp 00dh		;a18d	fe 0d 	. . 
-	jr z,la197h		;a18f	28 06 	( . 
+	jr z, TWOLN		;a18f	28 06 	( . 
 	call JCRTCO		;a191	cd 0a a0 	. . . 
 	inc hl			;a194	23 	# 
-	jr la18bh		;a195	18 f4 	. . 
-	
+	jr la18bh		;a195	18 f4 	. . ; repeat until a 00dh, LF is found
+
+TWOLN:	
 la197h:
-	call la106h		;a197	cd 06 a1 	. . . 
-	call la106h		;a19a	cd 06 a1 	. . . 
+	call CRLF		;a197	cd 06 a1 	. . . 
+	call CRLF		;a19a	cd 06 a1 	. . . 
 	ret			;a19d	c9 	. 
 	
 WSINIT:     ; init 6845, clear screen, return from call
 la19eh:
 	ld de, SCREEN		;a19e	11 04 ff 	. . . 
-;	ld bc,0ff2bh		;a1a1	01 2b ff 	. + . 
 	ld (VIDMEMP), de		;a1a4	ed 53 0a 46 	. S . F 
-;	ld (0460ch), bc		;a1a8	ed 43 0c 46 	. C . F 
 	ld hl, REGTAB		;a1ac	21 9d a4 	! . . 
 	call REGINIT		;a1af	cd 19 a0 	. . .   config 6845
 	ld c,00ch		;a1b2	0e 0c 	. . 
@@ -493,7 +510,7 @@ la36bh:
 	ld (hl),c			;a370	71 	q 
 	pop bc			;a371	c1 	. 
 	pop af			;a372	f1 	. 
-	call sub_a3f8h		;a373	cd f8 a3 	. . . 
+	call WRVIDMEM		;a373	cd f8 a3 	. . . 
 	call sub_a329h		;a376	cd 29 a3 	. ) . 
 	ret				;a379	c9 	. 
     
@@ -556,7 +573,7 @@ la3bch:
 	pop de			;a3c3	d1 	. 
 	inc de			;a3c4	13 	. 
 	ld bc,CHROWS-1		;a3c5	01 27 00 	. ' . 
-	call sub_a3f8h		;a3c8	cd f8 a3 	. . . 
+	call WRVIDMEM		;a3c8	cd f8 a3 	. . . 
 	ret				;a3cb	c9 	. 
 	
 sub_a3cch:  ; calculate and store new cursor address in CRT R14/R15
@@ -588,8 +605,10 @@ la3dfh:
 	add hl,de			;a3f3	19 	. 
 	call sub_a486h		;a3f4	cd 86 a4 	. . . ; store c in 4602h
 	ret				;a3f7	c9 	. 
-	
-sub_a3f8h:      ; read CRT register status (6545) 
+
+WRVIDMEM:	
+sub_a3f8h:      ; read (HL) into A, read (HL) and compare. Repeat until it matches.
+				; then 
 	push af			;a3f8	f5 	. 
 	ld b,c			;a3f9	41 	A 
 la3fah:
@@ -598,12 +617,12 @@ la3fah:
 	jr nc,la3fah		;a3fd	30 fb 	0 . ; try again1
 la404h:
 	ld a,(hl)			;a404	7e 	~ 
-	cp (hl)			;a405	be 	. 
-;	jr nz,la404h		;a406	20 fc 	  .  ; try again2 - this looped
+;	cp (hl)			;a405	be 	. 
+;	jr nz,la404h		;a406	20 fc 	  .  ; try again2 - this looped 
 	ex de,hl			;a408	eb 	. 
-la409h:
+la409h:			; write A to (HL), read (HL) and compare. Repeat until it matches.
 	ld (hl),a			;a409	77 	w 
-	cp (hl)			;a40a	be 	. 
+;	cp (hl)			;a40a	be 	. 
 ;	jr nz,la409h		;a40b	20 fc 	  .  ; try again3 - this looped
 	ex de,hl			;a40d	eb 	. 
 	inc hl			;a40e	23 	# 
@@ -661,8 +680,9 @@ la441h:
 LINEND:
 la44ah:	; table for line end 
 	defb	CR, LF, 00h
-	
-sub_a44dh: ; write de to video memory pointed to by hl.
+
+RDVIDMEM:	
+sub_a44dh: ; read de from video memory pointed to by hl.
 	push af			;a44d	f5 	. 
 	push de			;a44e	d5 	. 
 la44fh:
@@ -681,17 +701,17 @@ la456h:
 	pop af			;a45e	f1 	. 
 	ret				;a45f	c9 	. 
 	
-sub_a460h: 
+sub_a460h: 			; get cursor position COLPOS/ROWPOS into DE
 	push hl			;a460	e5 	. 
 	ld hl,COLPOS		;a461	21 04 46 	! . F 
-	call sub_a44dh		;a464	cd 4d a4 	. M . 
+	call RDVIDMEM		;a464	cd 4d a4 	. M . 
 	ex de,hl			;a467	eb 	. 
 	pop hl			;a468	e1 	. 
 	ret				;a469	c9 	. 
 	
 sub_a46ah:
 	ld hl,d4602h		;a46a	21 02 46 	! . F 
-	call sub_a44dh		;a46d	cd 4d a4 	. M . 
+	call RDVIDMEM		;a46d	cd 4d a4 	. M . 
 	ret				;a470	c9 	. 
 	
 sub_a471h:  ; update COLPOS & ROWPOS with CRT data
